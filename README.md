@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # pux-starter-app
 
 Starter [Pux](https://github.com/alexmingoia/purescript-pux/) application
@@ -33,3 +34,7 @@ production run `npm run serve:prod`.
 ### build
 
 `npm run build` bundles and minifies your application to run in production mode.
+=======
+# purescript-pianoUI
+Experiment with Purescript Pux using Starter App
+>>>>>>> 74432aa50f6a8d5af4d4f17e6d462ada646081a6
