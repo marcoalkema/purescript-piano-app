@@ -13,47 +13,38 @@ import Pux.Html.Elements
 import Pux.Html.Elements (span)
 import Pux.Html.Attributes
 import Pux.Html.Attributes (style)
+import MidiPlayer
 
+--kip
 
-data Action = Action1 | Action2 | PianoKeyPressed Note Int | PianoKeyUp | PlayBackNote Int
+data Action = PianoKeyPressed Note Int | PianoKeyUp | PlayButtonPressed | NoteHelperResize
 
 data Note = NoteC | NoteCis | NoteD | NoteDis | NoteE | NoteF | NoteFis | NoteG | NoteGis | NoteA | NoteAis | NoteB
+
+type Octave = Int
+type MidiNote = Int
+type CurrentPlayBackNote = MidiNote
+type CurrentUserNote = MidiNote
 
 type State = { a                    :: Number
              , b                    :: Octave
              , currentPlayBackNotes :: Array MidiNote
-             , currentUserNotes     :: Array MidiNote }
+             , currentUserNotes     :: Array MidiNote
+             , selectedNote         :: MidiNote 
+             , noteHelperActivated  :: Boolean
+             , playButtonPressed    :: Boolean}
 
 update :: Action -> State -> State
-update Action1 state = { a                    : 0.0
-                         , b                    : 0 
-                         , currentPlayBackNotes : [60, 64, 67]
-                         , currentUserNotes     : [38, 42, 65]}
-update Action2 state = { a                    : 0.0
-                         , b                    : 10
-                         , currentPlayBackNotes : [62, 66, 69]
-                         , currentUserNotes     : [40, 44, 67]}
-update PianoKeyUp state = { a                    : 0.0
-                          , b                    : 1337
-                          , currentPlayBackNotes : [62, 66, 69]
-                          , currentUserNotes     : [40, 44, 67]}
-update (PianoKeyPressed x y) state = {  a                    : 0.0
-                                      , b                    : toMidiNote x y
-                                      , currentPlayBackNotes : [62, 66, 69]
-                                      , currentUserNotes     : [40, 44, 67]}
--- update (PlayBackNote x) state = state { currentPlayBackNotes = (cons x state.currentPlayBackNotes)}
+update PlayButtonPressed state = state { playButtonPressed = not state.playButtonPressed }
+update NoteHelperResize state = state {noteHelperActivated = not state.noteHelperActivated}
+update PianoKeyUp state = state { noteHelperActivated = state.noteHelperActivated}
+update (PianoKeyPressed x y) state = state { selectedNote = toMidiNote x y }
 
 updateCurrentPlaybackNotes :: State -> Int -> State
 updateCurrentPlaybackNotes state n = state { currentPlayBackNotes = cons n state.currentPlayBackNotes }
 
 updateCurrentUserNotes :: State -> Int -> State
 updateCurrentUserNotes state n = state { currentUserNotes = cons n state.currentUserNotes }
-                                 
-type Octave = Int
-
-type MidiNote = Int
-type CurrentPlayBackNote = MidiNote
-type CurrentUserNote = MidiNote
 
 currentNotePlayed :: CurrentPlayBackNote
 currentNotePlayed = 51
@@ -65,10 +56,13 @@ init :: State
 init = { a : 0.0
        , b : 0
        , currentPlayBackNotes : [60, 64, 67]
-       , currentUserNotes     : [38, 42, 65] }
+       , currentUserNotes     : [38, 42, 65]
+       , selectedNote         : 0
+       , noteHelperActivated  : true
+       , playButtonPressed    : false }
 
 view :: State -> Html Action
-view state = do
+view state  = do
   Pux.div
     [ style { height : "100%"
             , width : "100%"
@@ -77,67 +71,137 @@ view state = do
     ]
     [ Pux.div [ pianoStyle
               , id_ "foo" ] (foldr (\y x -> cons y x) (drawOctaves state) 
-                             [ Pux.div [ style { height     : "15%"
-                                               , width      : "100%"
-                                               , background : "#F4F4F4" } ] [ Pux.div [ onClick (const Action2), style { height     : "98%"
-                                                                                                                         , width      : "8%"
-                                                                                                                         , display    : "inline-block"
-                                                                                                                         , marginLeft : "13.6%"
-                                                                                                                         , background : "yellow" } ] []
-                                                                            , Pux.div [ style { height     : "98%"
-                                                                                              , width      : "8%"
-                                                                                              , marginLeft : "13.6%"
-                                                                                              , display    : "inline-block"
-                                                                                              , left       : "20%"
-                                                                                              , background : "blue" } ] []
-                                                                            , Pux.div [ onClick (const Action1), style { height     : "98%"
-                                                                                                                         , width      : "8%"
-                                                                                                                         , marginLeft : "13.6%"
-                                                                                                                         , display    : "inline-block"
-                                                                                                                         , left       : "20%"
-                                                                                                                         , background : "green" } ] []
-                                                                                       , Pux.div [ style { height       : "98%"
-                                                                                                           , width      : "8%"
-                                                                                                           , marginLeft : "13.6%"
-                                                                                                           , display    : "inline-block"
-                                                                                                           , left       : "20%"
-                                                                                                           , background : "red" } ] []
-                                                                                       ]
-                             , Pux.div [ id_ "canvasDiv"
-                                       , style { height     : "40%"
-                                               , width      : "100%"
-                                               , background : "white" } ] [ canvas [id_ "notationCanvas", style { height : "100%"
-                                                                                                                , width  : "100% " }] []
-                                                                          , text $ show state.b
-                                                                          ]
-                             , Pux.div [ style { height     : "15%"
+                             [ Pux.div [style { height     : "3%"
+                                              , width      : "100%"
+                                              , background : "#D4D4D4" } ] []
+                             , Pux.div [ style { height     : "1%"
                                                , width      : "100%"
                                                , background : "#F4F4F4" } ] []
+                             , Pux.div [ style { height     : "6%"
+                                               , width      : "100%"
+                                               , background : "#F4F4F4" } ] [ Pux.div [style { height      : "100%"
+                                                                                             , width       : "33%"
+                                                                                             , display     : "inline-block"}] []
+                                                                            , Pux.div [style { height      : "100%"
+                                                                                             , width       : "33%"
+                                                                                             , display     : "inline-block" }] [ 
+                                                                                                                               Pux.div [style { height      : "100%"
+                                                                                                                                              , width       : "100%"
+                                                                                                                                              -- , background  : "black"
+                                                                                                                                                }] (map placeButton playBackButtons) ]
+                                                                            , Pux.div [style { height      : "100%"
+                                                                                             , width       : "33%"
+                                                                                             , display     : "inline-block"} ] [] ]
+                             , Pux.div [ id_ "fooBar"
+                                       , style { height     : "1%"
+                                               , width      : "100%"
+                                               , background : "#F4F4F4"} ] []
+                             -- , Pux.div [ style { height     : "0.3%"
+                             --                   , width      : "100%"
+                             --                   , background : "#D4D4D4"] []
+                             , Pux.div [ style { height     : "3%"
+                                               , width      : "100%"
+                                               , background : "white"} ] []
+
+                             , Pux.div [ id_ "canvasDiv"
+                                       , style { height     : "59%"
+                                               , width      : "100%"
+                                               , background : "white"
+                                               , overflow   : "scroll"} ] [ canvas [ id_ "notationCanvas"
+                                                                                   , style { overflow : "scroll"
+                                                                                           , marginLeft : "1.4%"
+                                                                                           , marginRight : "1%" }
+                                                                                   , height "1000%"
+                                                                                   , width "1240%" ] [text "HOI"] ]
+                             , Pux.div [ style { height     : "6%"
+                                               , fontSize   : "33"  
+                                               , width      : "100%"
+                                               , background : "#F4F4F4"
+                                               } ] [ text $ "Currently selected note : " ++ show state.selectedNote ]
+                             , Pux.div [ style { height     : "20%"
+                                               , width      : noteHelperDivSize state.noteHelperActivated ++ "%"
+                                               , position   : "absolute"
+                                               , right      : "0%"
+                                               , border     : "2px solid #ddd"
+                                               , bottom     : "21%"
+                                               , overflow   : "scroll" } ] [ Pux.div [ style { height    : "100%"
+                                                                                             , width      : noteHelperSize state.noteHelperActivated ++ "%"
+                                                                                             , position   : "absolute"
+                                                                                             , display    : "inline" } ] [Pux.canvas [ id_ "noteHelperCanvas"
+                                                                                                                                     , style { background : "white"}
+                                                                                                                                     , height "180%"
+                                                                                                                                     , width "250%" ] [] ] 
+                                                                          , Pux.div [ onClick $ const NoteHelperResize
+                                                                                              , style { height     : "100%"
+                                                                                                      , width      : "15px"
+                                                                                                      , position   : "absolute"
+                                                                                                      , background : "#a4a4a4"
+                                                                                                      , display    : "inline" }] [] ]
                              ]
                             ) ]
 
+noteHelperSize :: Boolean -> String
+noteHelperSize isActivated = if isActivated then "100" else "0"
+
+noteHelperDivSize :: Boolean -> String
+noteHelperDivSize isActivated = if isActivated then "20" else "1"
+
+playBackButtons :: Array String
+playBackButtons = ["play.png", "pause.png", "loop.png", "mute.png"]
+
+placeButton :: String -> Html Action
+placeButton button = Pux.div [ onClick $ const PlayButtonPressed
+                             , style { height     : "100%"
+                                     , width      : "15%"
+                                     , marginLeft : "10%"
+                                     , display    : "inline"
+                                     , float      : "left"
+                                     , position   : "relative" } ] [ Pux.img [ src button
+                                                                             , style { maxHeight : "100%"
+                                                                                     , maxWidth  : "100%" 
+                                                                                     } ] [] ]
 octaveNumber :: Int
 octaveNumber = 6
-               
-drawOctaves :: State -> Array (Html Action)
-drawOctaves state = map (\x -> drawOctave x state.currentPlayBackNotes state.currentUserNotes) (octaves octaveNumber)
-                    
+
 octaves :: Octave -> Array Octave
 octaves n = range 1 (round (max (toNumber 1) (abs $ toNumber n)))
-            
-drawOctave :: Octave  -> Array MidiNote -> Array MidiNote -> (Html Action)
-drawOctave oct notePlayed userNote = Pux.div [] (drawKeys oct notePlayed userNote)
+               
+drawOctaves :: State -> Array (Html Action)
+drawOctaves state = map (\x -> drawOctave x state.currentPlayBackNotes state.currentUserNotes state.selectedNote) (octaves octaveNumber)
+                    
+drawOctave :: Octave  -> Array MidiNote -> Array MidiNote -> MidiNote -> (Html Action)
+drawOctave oct notePlayed userNote selectedNote = Pux.div [] (drawKeys oct notePlayed userNote selectedNote)
 
-drawKeys :: Octave -> Array MidiNote -> Array MidiNote -> Array (Html Action)
-drawKeys octave notePlayed userNote = map (\pos -> drawKey pos octave notePlayed userNote) positions
+drawKeys :: Octave -> Array MidiNote -> Array MidiNote -> MidiNote -> Array (Html Action)
+drawKeys octave notePlayed userNote selectedNote  = map (\pos -> drawKey pos octave notePlayed userNote selectedNote) positions
 
-drawKey :: PosRec -> Octave -> Array MidiNote -> Array MidiNote -> Html Action                          
-drawKey posRec octave notePlayed userNote  = (Pux.div [ onMouseDown (const (PianoKeyPressed posRec.note octave) )
-                                                      , onMouseUp (const PianoKeyUp)
-                                                      , styles posRec octave notePlayed userNote] [])
+drawKey :: PosRec -> Octave -> Array MidiNote -> Array MidiNote -> MidiNote -> Html Action                          
+drawKey posRec octave notePlayed userNote selectedNote = (Pux.div [ onMouseDown (const (PianoKeyPressed posRec.note octave) )
+                                                                  , onMouseUp   (const PianoKeyUp)
+                                                                  , styles posRec octave notePlayed userNote] [Pux.img [ src $ ((++) (getColor posRec) $ keyStatus posRec octave notePlayed userNote selectedNote) ++ keyShadow posRec octave
+                                                                                                                       , style { height : "100%"
+                                                                                                                               , width  : "100%"
+                                                                                                                               , overflow : "hidden" } ] []  ])
+
+getColor :: PosRec -> String
+getColor posRec =  if posRec.isBlack then "black" else "white"
+
+keyShadow :: PosRec -> Octave -> String
+keyShadow posRec oct = if mod (toMidiNote posRec.note oct) 12 == 11 || mod (toMidiNote posRec.note oct) 12 == 4 then
+                                      "BE.jpg"
+                                    else
+                                      ".jpg"
+
+keyStatus :: PosRec -> Octave -> Array MidiNote -> Array MidiNote -> MidiNote -> String
+keyStatus posRec octave notesPlayed userNotes selectedNote = if (toMidiNote posRec.note octave) == selectedNote then "Key_selected"
+                                                             else if hasMidiNote (toMidiNote posRec.note octave) notesPlayed then "Key_grey"
+                                                             else if hasMidiNote (toMidiNote posRec.note octave) userNotes then "Key_red"
+                                                             else "Key"
 
 styles :: PosRec -> Octave -> Array MidiNote -> Array MidiNote -> Attribute Action
-styles posRec  = if posRec.isBlack then styleBlack posRec else styleWhite posRec 
+styles posRec = if posRec.isBlack then styleBlack posRec else styleWhite posRec
+
+
 
 type PosRec = { position :: Number
               , isBlack  :: Boolean
@@ -161,7 +225,7 @@ pos3 =  { position  : blackKeyOffset + (1.0 * whiteKeyWidth)
         , note      :  NoteDis }
 pos4 ::  PosRec
 pos4 =  { position  : 2.0 * whiteKeyWidth
-        , isBlack      : false
+        , isBlack   : false
         , note      : NoteE }
 pos5 ::  PosRec
 pos5 =  { position  : 3.0 * whiteKeyWidth
@@ -236,28 +300,22 @@ hasMidiNote note = foldl (\y midiNote -> if midiNote == note then true else y) f
 styleWhite :: PosRec -> Int -> Array MidiNote -> Array MidiNote -> Attribute Action
 styleWhite posRec octave notesPlayed userNotes =
   style { id_        : "whiteKey"
-        , background : if hasMidiNote (toMidiNote posRec.note octave) notesPlayed then "green"
-                       else if hasMidiNote (toMidiNote posRec.note octave) userNotes then "red"
-                       else "white"
-        , border     : "2px solid #aaa"
+        , borderLeft     : "1px solid #444"
         , height     : show whiteKeyHeight ++ "%"
         , width      : show (whiteKeyWidth / (abs $ toNumber octaveNumber)) ++ "%"
         , left       : show (((100.0 / abs (toNumber octaveNumber)) * (toNumber octave - 1.0)) + (posRec.position / abs (toNumber octaveNumber))) ++ "%"
         , position   : "absolute"
-        , bottom     : "10%" }
+        , bottom     : "1%" }
 
 styleBlack :: PosRec -> Octave -> Array MidiNote -> Array MidiNote -> Attribute Action
 styleBlack posRec octave notesPlayed userNotes =
   style { id_        : "blackKey"
-        , background : if hasMidiNote (toMidiNote posRec.note octave) notesPlayed then "green"
-                       else if hasMidiNote (toMidiNote posRec.note octave) userNotes then "red"
-                       else "black"
         , color      : "red"
         , height     : (show (0.7 * whiteKeyHeight)) ++ "%"
         , width      : show ((whiteKeyWidth * 0.6) / abs (toNumber octaveNumber)) ++ "%"
         , position   : "absolute"
         , left       : show (((100.0 / abs (toNumber octaveNumber)) * (toNumber octave - 1.0)) +  (posRec.position / abs (toNumber octaveNumber))) ++ "%"
-        , bottom     : "15.2%" }
+        , bottom     : "6%" }
 
 pianoStyle    :: Attribute Action
 pianoStyle =
@@ -267,7 +325,6 @@ pianoStyle =
     , background : "black"
     , overflow   : "hidden"
     , position   : "relative"
-    , fontSize   : "72px"
     , float      : "left" }
 
 -- buttonStyle :: Attribute
