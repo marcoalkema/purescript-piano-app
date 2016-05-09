@@ -17,7 +17,7 @@ import MidiPlayer
 
 --kip
 
-data Action = PianoKeyPressed Note Int | PianoKeyUp | PlayButtonPressed | NoteHelperResize
+data Action = PianoKeyPressed Note Int | PianoKeyUp | PlayButtonPressed | NoteHelperResize | Piano Int
 
 data Note = NoteC | NoteCis | NoteD | NoteDis | NoteE | NoteF | NoteFis | NoteG | NoteGis | NoteA | NoteAis | NoteB
 
@@ -39,6 +39,7 @@ update PlayButtonPressed state = state { playButtonPressed = not state.playButto
 update NoteHelperResize state = state {noteHelperActivated = not state.noteHelperActivated}
 update PianoKeyUp state = state { noteHelperActivated = state.noteHelperActivated}
 update (PianoKeyPressed x y) state = state { selectedNote = toMidiNote x y }
+update (Piano n) state = state { selectedNote = n }
 
 updateCurrentPlaybackNotes :: State -> Int -> State
 updateCurrentPlaybackNotes state n = state { currentPlayBackNotes = cons n state.currentPlayBackNotes }
@@ -53,10 +54,10 @@ currentUserNote :: CurrentUserNote
 currentUserNote = 60
 
 init :: State
-init = { a : 0.0
-       , b : 0
-       , currentPlayBackNotes : [60, 64, 67]
-       , currentUserNotes     : [38, 42, 65]
+init = { a                    : 0.0
+       , b                    : 0
+       , currentPlayBackNotes : []
+       , currentUserNotes     : []
        , selectedNote         : 0
        , noteHelperActivated  : true
        , playButtonPressed    : false }
