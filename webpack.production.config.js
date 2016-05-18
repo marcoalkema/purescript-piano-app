@@ -17,8 +17,29 @@ module.exports = {
         { test: /\.js$/,   loader: "webpack-strip?strip[]=console.log" },
         { test: /\.css$/,  loader: 'style!css-loader?modules&importLoaders=1&localIdentName=[name]__[local]___[hash:base64:5]'},
         { test: /\.png$/,  loader: "url-loader?limit=100000" },
-        { test: /\.jpg$/,  loader: "file-loader" }
-    ],
+        { test: /\.jpg$/,  loader: "file-loader" },
+	{ test: /\.png$/, loader: "file-loader" },
+        { test: /\.jpg$/,  loader: "file-loader" },
+	{  // ASSET LOADER
+	    test: /\.(woff|woff2|ttf|eot)$/,
+	    loader: 'file'
+	},
+	{
+	    //IMAGE LOADER
+	    test: /\.(jpe?g|png|gif|svg)$/i,
+	    loader:'file'
+	},
+{
+    // HTML LOADER
+    test: /\.html$/,
+    loader: 'html-loader'
+},
+	{
+	    //SCSS LOADER
+  test: /\.scss$/,
+	    loaders: ["style", "css", "sass?indentedSyntax"]
+	}
+	]
   },
   plugins: [
     new PurescriptWebpackPlugin({

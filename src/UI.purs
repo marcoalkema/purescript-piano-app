@@ -17,7 +17,7 @@ import MidiPlayer
 
 --kip
 
-data Action = PianoKeyPressed Note Int | PianoKeyUp | PlayButtonPressed | NoteHelperResize
+data Action = PianoKeyPressed Note Int | PianoKeyUp | PlayButtonPressed | NoteHelperResize | Piano Int | IncrementPlayBackIndex | UserNote Int
 
 data Note = NoteC | NoteCis | NoteD | NoteDis | NoteE | NoteF | NoteFis | NoteG | NoteGis | NoteA | NoteAis | NoteB
 
@@ -26,40 +26,35 @@ type MidiNote = Int
 type CurrentPlayBackNote = MidiNote
 type CurrentUserNote = MidiNote
 
-type State = { a                    :: Number
-             , b                    :: Octave
-             , currentPlayBackNotes :: Array MidiNote
-             , currentUserNotes     :: Array MidiNote
-             , selectedNote         :: MidiNote 
-             , noteHelperActivated  :: Boolean
-             , playButtonPressed    :: Boolean}
+type State = { a                        :: Number
+             , b                        :: Octave
+             , currentPlayBackNotes     :: MidiNote
+             , currentUserNotes         :: Array MidiNote
+             , selectedNote             :: MidiNote 
+             , noteHelperActivated      :: Boolean
+             , playButtonPressed        :: Boolean
+             , currentPlayBackNoteIndex :: Int
+             , userNote                 :: Int}
 
 update :: Action -> State -> State
-update PlayButtonPressed state = state { playButtonPressed = not state.playButtonPressed }
-update NoteHelperResize state = state {noteHelperActivated = not state.noteHelperActivated}
-update PianoKeyUp state = state { noteHelperActivated = state.noteHelperActivated}
-update (PianoKeyPressed x y) state = state { selectedNote = toMidiNote x y }
-
-updateCurrentPlaybackNotes :: State -> Int -> State
-updateCurrentPlaybackNotes state n = state { currentPlayBackNotes = cons n state.currentPlayBackNotes }
-
-updateCurrentUserNotes :: State -> Int -> State
-updateCurrentUserNotes state n = state { currentUserNotes = cons n state.currentUserNotes }
-
-currentNotePlayed :: CurrentPlayBackNote
-currentNotePlayed = 51
-
-currentUserNote :: CurrentUserNote
-currentUserNote = 60
+update PlayButtonPressed state      = state { playButtonPressed = not state.playButtonPressed }
+update NoteHelperResize state       = state { noteHelperActivated = not state.noteHelperActivated}
+update PianoKeyUp state             = state { noteHelperActivated = state.noteHelperActivated}
+update (PianoKeyPressed x y) state  = state { selectedNote = toMidiNote x y }
+update (Piano n) state              = state { selectedNote = n }
+update IncrementPlayBackIndex state = state { currentPlayBackNoteIndex = state.currentPlayBackNoteIndex + 1 }
+update (UserNote n) state           = state { currentPlayBackNotes = n }
 
 init :: State
-init = { a : 0.0
-       , b : 0
-       , currentPlayBackNotes : [60, 64, 67]
-       , currentUserNotes     : [38, 42, 65]
-       , selectedNote         : 0
-       , noteHelperActivated  : true
-       , playButtonPressed    : false }
+init = { a                        : 0.0
+       , b                        : 0
+       , currentPlayBackNotes     : 0
+       , currentUserNotes         : []
+       , selectedNote             : 0
+       , noteHelperActivated      : true
+       , playButtonPressed        : false
+       , currentPlayBackNoteIndex : 0
+       , userNote                 : 0 }
 
 view :: State -> Html Action
 view state  = do
@@ -87,7 +82,6 @@ view state  = do
                                                                                              , display     : "inline-block" }] [ 
                                                                                                                                Pux.div [style { height      : "100%"
                                                                                                                                               , width       : "100%"
-                                                                                                                                              -- , background  : "black"
                                                                                                                                                 }] (map placeButton playBackButtons) ]
                                                                             , Pux.div [style { height      : "100%"
                                                                                              , width       : "33%"
@@ -117,7 +111,7 @@ view state  = do
                                                , fontSize   : "33"  
                                                , width      : "100%"
                                                , background : "#F4F4F4"
-                                               } ] [ text $ "Currently selected note : " ++ show state.selectedNote ]
+                                               } ] [ text $ "Currently selected note : " ++ show state.currentPlayBackNoteIndex ]
                              , Pux.div [ style { height     : "20%"
                                                , width      : noteHelperDivSize state.noteHelperActivated ++ "%"
                                                , position   : "absolute"
@@ -169,13 +163,13 @@ octaves n = range 1 (round (max (toNumber 1) (abs $ toNumber n)))
 drawOctaves :: State -> Array (Html Action)
 drawOctaves state = map (\x -> drawOctave x state.currentPlayBackNotes state.currentUserNotes state.selectedNote) (octaves octaveNumber)
                     
-drawOctave :: Octave  -> Array MidiNote -> Array MidiNote -> MidiNote -> (Html Action)
+drawOctave :: Octave  -> MidiNote -> Array MidiNote -> MidiNote -> (Html Action)
 drawOctave oct notePlayed userNote selectedNote = Pux.div [] (drawKeys oct notePlayed userNote selectedNote)
 
-drawKeys :: Octave -> Array MidiNote -> Array MidiNote -> MidiNote -> Array (Html Action)
+drawKeys :: Octave -> MidiNote -> Array MidiNote -> MidiNote -> Array (Html Action)
 drawKeys octave notePlayed userNote selectedNote  = map (\pos -> drawKey pos octave notePlayed userNote selectedNote) positions
 
-drawKey :: PosRec -> Octave -> Array MidiNote -> Array MidiNote -> MidiNote -> Html Action                          
+drawKey :: PosRec -> Octave -> MidiNote -> Array MidiNote -> MidiNote -> Html Action                          
 drawKey posRec octave notePlayed userNote selectedNote = (Pux.div [ onMouseDown (const (PianoKeyPressed posRec.note octave) )
                                                                   , onMouseUp   (const PianoKeyUp)
                                                                   , styles posRec octave notePlayed userNote] [Pux.img [ src $ ((++) (getColor posRec) $ keyStatus posRec octave notePlayed userNote selectedNote) ++ keyShadow posRec octave
@@ -192,13 +186,13 @@ keyShadow posRec oct = if mod (toMidiNote posRec.note oct) 12 == 11 || mod (toMi
                                     else
                                       ".jpg"
 
-keyStatus :: PosRec -> Octave -> Array MidiNote -> Array MidiNote -> MidiNote -> String
+keyStatus :: PosRec -> Octave -> MidiNote -> Array MidiNote -> MidiNote -> String
 keyStatus posRec octave notesPlayed userNotes selectedNote = if (toMidiNote posRec.note octave) == selectedNote then "Key_selected"
-                                                             else if hasMidiNote (toMidiNote posRec.note octave) notesPlayed then "Key_grey"
-                                                             else if hasMidiNote (toMidiNote posRec.note octave) userNotes then "Key_red"
+                                                             else if toMidiNote posRec.note octave == notesPlayed then "Key_red"
+                                                             else if hasMidiNote (toMidiNote posRec.note octave) userNotes then "Key_grey"
                                                              else "Key"
 
-styles :: PosRec -> Octave -> Array MidiNote -> Array MidiNote -> Attribute Action
+styles :: PosRec -> Octave -> MidiNote -> Array MidiNote -> Attribute Action
 styles posRec = if posRec.isBlack then styleBlack posRec else styleWhite posRec
 
 
@@ -297,7 +291,7 @@ isCurrentNote posRec oct note = toMidiNote posRec.note oct == note
 hasMidiNote :: MidiNote -> Array MidiNote -> Boolean
 hasMidiNote note = foldl (\y midiNote -> if midiNote == note then true else y) false
 
-styleWhite :: PosRec -> Int -> Array MidiNote -> Array MidiNote -> Attribute Action
+styleWhite :: PosRec -> Int -> MidiNote -> Array MidiNote -> Attribute Action
 styleWhite posRec octave notesPlayed userNotes =
   style { id_        : "whiteKey"
         , borderLeft     : "1px solid #444"
@@ -307,17 +301,16 @@ styleWhite posRec octave notesPlayed userNotes =
         , position   : "absolute"
         , bottom     : "1%" }
 
-styleBlack :: PosRec -> Octave -> Array MidiNote -> Array MidiNote -> Attribute Action
+styleBlack :: PosRec -> Octave -> MidiNote -> Array MidiNote -> Attribute Action
 styleBlack posRec octave notesPlayed userNotes =
   style { id_        : "blackKey"
-        , color      : "red"
         , height     : (show (0.7 * whiteKeyHeight)) ++ "%"
         , width      : show ((whiteKeyWidth * 0.6) / abs (toNumber octaveNumber)) ++ "%"
         , position   : "absolute"
         , left       : show (((100.0 / abs (toNumber octaveNumber)) * (toNumber octave - 1.0)) +  (posRec.position / abs (toNumber octaveNumber))) ++ "%"
         , bottom     : "6%" }
 
-pianoStyle    :: Attribute Action
+pianoStyle :: Attribute Action
 pianoStyle =
   style
     { height     : "100%"
@@ -326,32 +319,3 @@ pianoStyle =
     , overflow   : "hidden"
     , position   : "relative"
     , float      : "left" }
-
--- buttonStyle :: Attribute
--- buttonStyle =
---   style
---     [ ("height", "104px")
---     , ("width", "60px")
---     , ("background-color", "#ddd")
---     , ("border", "2px solid #aaa")
---     , ("top", "200px")
---     , ("position", "relative")
---     , ("font-size", "72px")
---     , ("float", "left")
---     , ("left", "10px")
---     , ("z-index", "4")  
---     ]
-
--- pianoStyle' :: Attribute
--- pianoStyle' =
---   style
---     [ ("height", "360px")
---     , ("width", "98%")
---     , ("border", "2px solid #aaa")
---     , ("top", "210px")
---     , ("position", "relative")
---     , ("font-size", "72px")
---     , ("float", "left")
---     , ("left", "10px")
---     , ("z-index", "4")  
---     ]                  

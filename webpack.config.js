@@ -2,7 +2,8 @@ var path = require('path');
 var webpack = require('webpack');
 var PurescriptWebpackPlugin = require('purescript-webpack-plugin');
 var HtmlWebpackPlugin = require('html-webpack-plugin');
-// var css = require("css!./file.css");
+// var css = require("css!./index.css");
+// var url = require('./play.png');
 
 var port = process.env.PORT || 3000;
 
@@ -24,7 +25,27 @@ var config = {
             { test: /\.purs$/, loader: 'purs-loader', exclude: /node_modules/ },
             { test: /\.css$/,  loader: 'style!css-loader?modules&importLoaders=1&localIdentName=[name]__[local]___[hash:base64:5]'},
             { test: /\.png$/,  loader: "url-loader?limit=100000" },
-            { test: /\.jpg$/,  loader: "file-loader" }
+	    { test: /\.png$/, loader: "file-loader" },
+            { test: /\.jpg$/,  loader: "file-loader" },
+ {  // ASSET LOADER
+  test: /\.(woff|woff2|ttf|eot)$/,
+  loader: 'file'
+},
+{
+  //IMAGE LOADER
+  test: /\.(jpe?g|png|gif|svg)$/i,
+  loader:'file'
+},
+{
+  // HTML LOADER
+  test: /\.html$/,
+  loader: 'html-loader'
+},
+{
+  //SCSS LOADER
+  test: /\.scss$/,
+  loaders: ["style", "css", "sass?indentedSyntax"]
+}
         ]
   },
   plugins: [
@@ -72,8 +93,7 @@ var config = {
     root: './node_modules',
     modulesDirectories: [
         'node_modules',
-        'bower_components',
-        'foo'
+        'bower_components'
     ],
       extensions: ['', '.js', '.purs', '.css', '.jpg']
   }
