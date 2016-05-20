@@ -22,19 +22,19 @@ module.exports = {
     },
 
     loadFile : function(file){
-	return function(send1){
+	return function(send){
 	    return function(){		
-		var sequencer2 = window.sequencer;
+		var sequencer = window.sequencer;
 
-		sequencer2.ready(function init(){
+		sequencer.ready(function init(){
 
-		    sequencer2.addMidiFile({url: file}, function() {
+		    sequencer.addMidiFile({url: file}, function() {
 			var midiFile = window.sequencer.getMidiFile(file.split('.mid').join(''));
-			var song3 = window.sequencer.createSong(midiFile);
-			song3.play();
+			var song = window.sequencer.createSong(midiFile);
+			song.play();
 			
-			song3.addEventListener('event', 'type = NOTE_ON', function(midiEvent){
-			    send1(midiEvent.data1)();
+			song.addEventListener('event', 'type = NOTE_ON', function(midiEvent){
+			    send(midiEvent.data1)();
 			});
 		    });
 		});

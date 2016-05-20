@@ -17,42 +17,49 @@ import MidiPlayer
 
 --kip
 
-data Action = PianoKeyPressed Note Int | PianoKeyUp | PlayButtonPressed | NoteHelperResize | Piano Int | IncrementPlayBackIndex | UserNote Int
+data Action = PianoKeyPressed Note Int | PianoKeyUp | PlayButtonPressed | PauseButtonPressed | LoopButtonPressed | MuteButtonPressed | NoteHelperResize | Piano Int | IncrementPlayBackIndex | UserNote Int
 
 data Note = NoteC | NoteCis | NoteD | NoteDis | NoteE | NoteF | NoteFis | NoteG | NoteGis | NoteA | NoteAis | NoteB
 
-type Octave = Int
-type MidiNote = Int
+type Octave              = Int
+type MidiNote            = Int
 type CurrentPlayBackNote = MidiNote
-type CurrentUserNote = MidiNote
+type CurrentUserNote     = MidiNote
 
-type State = { a                        :: Number
-             , b                        :: Octave
-             , currentPlayBackNotes     :: MidiNote
+
+-- Separate states for ddifferent domains --> Niet alles in UI state gooien!
+type State = { currentPlayBackNotes     :: MidiNote
              , currentUserNotes         :: Array MidiNote
              , selectedNote             :: MidiNote 
              , noteHelperActivated      :: Boolean
              , playButtonPressed        :: Boolean
+             , pauseButtonPressed       :: Boolean
+             , loopButtonPressed        :: Boolean
+             , muteButtonPressed        :: Boolean
              , currentPlayBackNoteIndex :: Int
-             , userNote                 :: Int}
+             , userNote                 :: Int }
 
 update :: Action -> State -> State
-update PlayButtonPressed state      = state { playButtonPressed = not state.playButtonPressed }
-update NoteHelperResize state       = state { noteHelperActivated = not state.noteHelperActivated}
-update PianoKeyUp state             = state { noteHelperActivated = state.noteHelperActivated}
-update (PianoKeyPressed x y) state  = state { selectedNote = toMidiNote x y }
-update (Piano n) state              = state { selectedNote = n }
+update PlayButtonPressed state      = state { playButtonPressed        = not state.playButtonPressed  }
+update PauseButtonPressed state     = state { pauseButtonPressed       = not state.pauseButtonPressed }
+update LoopButtonPressed state      = state { loopButtonPressed        = not state.loopButtonPressed  }
+update MuteButtonPressed state      = state { muteButtonPressed        = not state.muteButtonPressed  }
+update NoteHelperResize state       = state { noteHelperActivated      = not state.noteHelperActivated}
+update PianoKeyUp state             = state { noteHelperActivated      = state.noteHelperActivated}
+update (PianoKeyPressed x y) state  = state { selectedNote             = toMidiNote x y }
+update (Piano n) state              = state { selectedNote             = n }
 update IncrementPlayBackIndex state = state { currentPlayBackNoteIndex = state.currentPlayBackNoteIndex + 1 }
-update (UserNote n) state           = state { currentPlayBackNotes = n }
+update (UserNote n) state           = state { currentPlayBackNotes     = n }
 
 init :: State
-init = { a                        : 0.0
-       , b                        : 0
-       , currentPlayBackNotes     : 0
+init = { currentPlayBackNotes     : 0
        , currentUserNotes         : []
        , selectedNote             : 0
        , noteHelperActivated      : true
        , playButtonPressed        : false
+       , pauseButtonPressed       : false
+       , loopButtonPressed        : false
+       , muteButtonPressed        : false
        , currentPlayBackNoteIndex : 0
        , userNote                 : 0 }
 
@@ -82,7 +89,7 @@ view state  = do
                                                                                              , display     : "inline-block" }] [ 
                                                                                                                                Pux.div [style { height      : "100%"
                                                                                                                                               , width       : "100%"
-                                                                                                                                                }] (map placeButton playBackButtons) ]
+                                                                                                                                                }] buttons ]
                                                                             , Pux.div [style { height      : "100%"
                                                                                              , width       : "33%"
                                                                                              , display     : "inline-block"} ] [] ]
@@ -111,7 +118,7 @@ view state  = do
                                                , fontSize   : "33"  
                                                , width      : "100%"
                                                , background : "#F4F4F4"
-                                               } ] [ text $ "Currently selected note : " ++ show state.currentPlayBackNoteIndex ]
+                                               } ] [ text $ "Currently selected note : " ++ show state.currentPlayBackNotes ]
                              , Pux.div [ style { height     : "20%"
                                                , width      : noteHelperDivSize state.noteHelperActivated ++ "%"
                                                , position   : "absolute"
@@ -134,26 +141,54 @@ view state  = do
                              ]
                             ) ]
 
+buttons = [ Pux.div [ onClick $ const PlayButtonPressed
+                    , style { height     : "100%"
+                            , width      : "15%"
+                            , marginLeft : "10%"
+                            , display    : "inline"
+                            , float      : "left"
+                            , position   : "relative" } ] [ Pux.img [ src "play.png"
+                                                                    , style { maxHeight : "100%"
+                                                                            , maxWidth  : "100%" 
+                                                                            } ] [] ]
+          , Pux.div [ onClick $ const PauseButtonPressed
+                    , style { height     : "100%"
+                            , width      : "15%"
+                            , marginLeft : "10%"
+                            , display    : "inline"
+                            , float      : "left"
+                            , position   : "relative" } ] [ Pux.img [ src "pause.png"
+                                                                    , style { maxHeight : "100%"
+                                                                            , maxWidth  : "100%" 
+                                                                            } ] [] ]
+          , Pux.div [ onClick $ const LoopButtonPressed
+                    , style { height     : "100%"
+                            , width      : "15%"
+                            , marginLeft : "10%"
+                            , display    : "inline"
+                            , float      : "left"
+                            , position   : "relative" } ] [ Pux.img [ src "loop.png"
+                                                                    , style { maxHeight : "100%"
+                                                                            , maxWidth  : "100%" 
+                                                                            } ] [] ]
+          , Pux.div [ onClick $ const MuteButtonPressed
+                    , style { height     : "100%"
+                            , width      : "15%"
+                            , marginLeft : "10%"
+                            , display    : "inline"
+                            , float      : "left"
+                            , position   : "relative" } ] [ Pux.img [ src "mute.png"
+                                                                    , style { maxHeight : "100%"
+                                                                            , maxWidth  : "100%" 
+                                                                            } ] [] ]
+            ]
+
 noteHelperSize :: Boolean -> String
 noteHelperSize isActivated = if isActivated then "100" else "0"
 
 noteHelperDivSize :: Boolean -> String
 noteHelperDivSize isActivated = if isActivated then "20" else "1"
-
-playBackButtons :: Array String
-playBackButtons = ["play.png", "pause.png", "loop.png", "mute.png"]
-
-placeButton :: String -> Html Action
-placeButton button = Pux.div [ onClick $ const PlayButtonPressed
-                             , style { height     : "100%"
-                                     , width      : "15%"
-                                     , marginLeft : "10%"
-                                     , display    : "inline"
-                                     , float      : "left"
-                                     , position   : "relative" } ] [ Pux.img [ src button
-                                                                             , style { maxHeight : "100%"
-                                                                                     , maxWidth  : "100%" 
-                                                                                     } ] [] ]
+          
 octaveNumber :: Int
 octaveNumber = 6
 
