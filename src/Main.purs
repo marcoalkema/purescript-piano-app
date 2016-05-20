@@ -67,8 +67,7 @@ main state = do
                         , instrument   : "acoustic_grand_piano" }
     (const (MidiPlayer.getData >>= renderMidi canvas))
 
-  runSignal (app.state ~> \state -> drawNoteHelper { fst : state.ui.currentPlayBackNotes,
-                                                     snd : state.ui.selectedNote } )
+  runSignal (app.state ~> \state -> drawNoteHelper state.ui.currentPlayBackNotes state.ui.selectedNote )
   -- runSignal (app.state ~> \x -> drawNoteHelper x.ui.selectedNote)
   -- runSignal (userInputSubscription ~> \userNote -> drawNoteHelper userNote)
   return app
@@ -91,11 +90,11 @@ userNoteSignal = do
 
 midiFile = "test4.mid"
 
-drawNoteHelper notes = do
+drawNoteHelper playBackNote userNote = do
   clearRect "noteHelperCanvas"
   noteHelperCanvas   <- createCanvas "noteHelperCanvas"
   noteHelperRenderer <- createRenderer noteHelperCanvas 
-  noteHelper         <- drawHelperStaff noteHelperRenderer notes
+  noteHelper         <- drawHelperStaff noteHelperRenderer playBackNote userNote
   return unit
 
 toPianoAction :: MidiNote -> App.Layout.Action
