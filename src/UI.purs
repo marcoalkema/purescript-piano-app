@@ -14,10 +14,13 @@ import Pux.Html.Elements (span)
 import Pux.Html.Attributes
 import Pux.Html.Attributes (style)
 import MidiPlayer
+import NoteHelper
+import Data.Maybe
+import VexFlow
 
 --kip
 
-data Action = PianoKeyPressed Note Int | PianoKeyUp | PlayButtonPressed | PauseButtonPressed | LoopButtonPressed | MuteButtonPressed | NoteHelperResize | Piano Int | IncrementPlayBackIndex | UserNote Int
+data Action = PianoKeyPressed Note Int | PianoKeyUp | PlayButtonPressed | PauseButtonPressed | LoopButtonPressed | MuteButtonPressed | NoteHelperResize | Piano Int | IncrementPlayBackIndex | UserNote Int | SetUserMelody | SetUserMelody2
 
 data Note = NoteC | NoteCis | NoteD | NoteDis | NoteE | NoteF | NoteFis | NoteG | NoteGis | NoteA | NoteAis | NoteB
 
@@ -27,7 +30,7 @@ type CurrentPlayBackNote = MidiNote
 type CurrentUserNote     = MidiNote
 
 
--- Separate states for ddifferent domains --> Niet alles in UI state gooien!
+-- TODO: Separate states for ddifferent domains --> Create new / domain-specific states!!!
 type State = { currentPlayBackNotes     :: MidiNote
              , currentUserNotes         :: Array MidiNote
              , selectedNote             :: MidiNote 
@@ -37,7 +40,10 @@ type State = { currentPlayBackNotes     :: MidiNote
              , loopButtonPressed        :: Boolean
              , muteButtonPressed        :: Boolean
              , currentPlayBackNoteIndex :: Int
-             , userNote                 :: Int }
+             , currentPlayBackNote      :: Int
+             , userNote                 :: Int
+             , melody                   :: Array MidiNote
+             , userMelody               :: Array MidiNote}
 
 update :: Action -> State -> State
 update PlayButtonPressed state      = state { playButtonPressed        = not state.playButtonPressed  }
@@ -50,6 +56,9 @@ update (PianoKeyPressed x y) state  = state { selectedNote             = toMidiN
 update (Piano n) state              = state { selectedNote             = n }
 update IncrementPlayBackIndex state = state { currentPlayBackNoteIndex = state.currentPlayBackNoteIndex + 1 }
 update (UserNote n) state           = state { currentPlayBackNotes     = n }
+-- update SetUserMelody state          = state { currentPlayBackNote      = fromJust $ Data.Array.head state.userMelody })
+update SetUserMelody state         = setMelody state
+-- update SetUserMelody2 state         = state { currentPlayBackNote      = fromJust $ Data.Array.head state.userMelody } 
 
 init :: State
 init = { currentPlayBackNotes     : 0
@@ -61,7 +70,39 @@ init = { currentPlayBackNotes     : 0
        , loopButtonPressed        : false
        , muteButtonPressed        : false
        , currentPlayBackNoteIndex : 0
-       , userNote                 : 0 }
+       , currentPlayBackNote      : fromJust $ Data.Array.head NoteHelper.melody
+       , userNote                 : 0
+       , melody                   : NoteHelper.melody
+       , userMelody               : NoteHelper.melody }
+
+setMelody :: State -> State
+setMelody state = { currentPlayBackNotes     : state.currentPlayBackNotes
+                  , currentUserNotes         : state.currentUserNotes
+                  , selectedNote             : state.selectedNote
+                  , noteHelperActivated      : state.noteHelperActivated
+                  , playButtonPressed        : state.playButtonPressed
+                  , pauseButtonPressed       : state.pauseButtonPressed
+                  , loopButtonPressed        : state.loopButtonPressed
+                  , muteButtonPressed        : state.muteButtonPressed
+                  , currentPlayBackNoteIndex : state.currentPlayBackNoteIndex
+                  , currentPlayBackNote      : fromJust $ Data.Array.head newMelody
+                  , userNote                 : state.userNote
+                  , melody                   : state.melody
+                  , userMelody               : newMelody }
+  where
+    newMelody = matchUserInput state.selectedNote state.userMelody
+
+                    
+
+matchUserInput :: MidiNote -> Array MidiNote -> Array MidiNote
+matchUserInput userNote playBackNotes = if currentNote == Nothing then
+                                          NoteHelper.melody
+                                        else if (Just userNote) == currentNote then
+                                          fromJust $ Data.Array.tail playBackNotes
+                                        else
+                                          playBackNotes
+  where
+    currentNote = Data.Array.head playBackNotes
 
 view :: State -> Html Action
 view state  = do
@@ -118,7 +159,9 @@ view state  = do
                                                , fontSize   : "33"  
                                                , width      : "100%"
                                                , background : "#F4F4F4"
-                                               } ] [ text $ "Currently selected note : " ++ show state.currentPlayBackNotes ]
+                                               } ] [ text $ "Currently selected note : " ++ show state.userMelody
+                                                   , text $ show state.selectedNote
+                                                   , text $ "        " ++ show state.currentPlayBackNote]
                              , Pux.div [ style { height     : "20%"
                                                , width      : noteHelperDivSize state.noteHelperActivated ++ "%"
                                                , position   : "absolute"

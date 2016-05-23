@@ -7,7 +7,7 @@ import VexMusic
 import MidiToVexFlow
 import Data.Tuple
 
-drawHelperStaff :: forall e. VexFlow -> Int -> Int -> Eff (vexFlow :: VEXFLOW | e) Unit
+drawHelperStaff :: forall e. VexFlow -> MidiNote -> MidiNote -> Eff (vexFlow :: VEXFLOW | e) Unit
 drawHelperStaff renderer userNote playBackNote = do
   ctx   <- createCtx renderer
   staff <- createStave 35 10 200.0
@@ -23,25 +23,22 @@ drawHelperStaff renderer userNote playBackNote = do
   formatter voice (200.0)
   drawVoice ctx staff voice
 
-midiNoteToVexNote :: Int -> Int -> Array (Array VexNote)
+midiNoteToVexNote :: MidiNote -> MidiNote -> Array (Array VexNote)
 midiNoteToVexNote userNote playBackNote = [ [userNote' userNote ]
                             , [userNote' playBackNote]]
 
-userTone :: Int -> VexTone
+userTone :: MidiNote -> VexTone
 userTone note = { pitch      : fst (midiNoteToPartialVexFlowNote $ mod note 12)
                 , accidental : snd (midiNoteToPartialVexFlowNote $ mod note 12)
                 , octave     : midiNoteToOctave note
                 }
 
-userNote' :: Int -> VexNote
+userNote' :: MidiNote -> VexNote
 userNote' note = { note     : [userTone note]
                 , duration : "4"
                 }
 
 
-type Foo =  { note :: { pitch :: String
-                      , accidental :: Music.Accidental
-                      , octave :: Int
-                      }
-            , duration :: String
-            }
+
+melody :: Array MidiNote
+melody = [60, 62, 64, 65, 66, 67]

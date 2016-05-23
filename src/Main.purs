@@ -5,7 +5,7 @@ import App.Layout (Action(PageView), State, view, update)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class 
 import DOM (DOM)
-import Prelude (bind, return, (++), show, not, unit, ($), (<$>), (<<<), map, (<>))
+import Prelude (bind, return, (++), show, not, unit, ($), (<$>), (<<<), map, (<>), (==))
 import Pux
 import Pux.Router (sampleUrl)
 import Signal ((~>))
@@ -28,6 +28,7 @@ import App.UI as UI
 import Pux.Html (Html)
 import App.Layout
 import Control.Monad.Aff
+import Data.Maybe
 
 type AppEffects = (dom :: DOM)
 type MidiNote = Int
@@ -39,37 +40,44 @@ main state = do
   let routeSignal :: Signal Action
       routeSignal = urlSignal ~> \r -> PageView (match r)
 
-  playBackChannel <- playBackNoteSignal
-  let trackSubscription :: Signal MidiNote
-      trackSubscription       = subscribe playBackChannel
-      incrementPlayBackSignal = trackSubscription ~> \midiNote -> incrementPlayIndex midiNote
-      playBackSignal          = trackSubscription ~> \midiNote -> playBackAction midiNote
+  -- playBackChannel <- playBackNoteSignal
+  -- let trackSubscription :: Signal MidiNote
+  --     trackSubscription       = subscribe playBackChannel
+  --     incrementPlayBackSignal = trackSubscription ~> \midiNote -> incrementPlayIndex midiNote
+  --     playBackSignal          = trackSubscription ~> \midiNote -> playBackAction midiNote
+
 
   userChannel <- userNoteSignal
   let userInputSubscription :: Signal MidiNote
       userInputSubscription = subscribe userChannel
       userInputSignal       = userInputSubscription ~> \midiNote -> toPianoAction midiNote
-  runSignal (userInputSubscription ~> \midiNote -> MidiPlayer.logger midiNote)
-     
+      -- triggerSignal2        = userInputSubscription ~> \midiNote -> trigger2
+      triggerSignal         = userInputSubscription ~> \midiNote -> trigger
+
+      
   app <- start
     { initialState: state
     , update:
       fromSimple update
     , view: view
-    , inputs: [fromJust $ mergeMany [routeSignal, userInputSignal, playBackSignal]]
+    , inputs: [fromJust $ mergeMany [routeSignal, userInputSignal, triggerSignal]]
     }
-    
+
   renderToDOM "#app" app.html
 
   canvas <- createCanvas "notationCanvas"
   MidiPlayer.loadFile midiFile
   MidiPlayer.loadPlugin { soundfontUrl : "midi/examples/soundfont/"
                         , instrument   : "acoustic_grand_piano" }
-    (const (MidiPlayer.getData >>= renderMidi canvas))
+    (const (MidiPlayer.getData >>= (renderMidi canvas app.state)))
 
-  runSignal (app.state ~> \state -> drawNoteHelper state.ui.currentPlayBackNotes state.ui.selectedNote )
+  -- let aap = runSignal (app.state ~> \state -> matchUserInput state.ui.userNote state.ui.userMelody)
+  runSignal (app.state ~> \state -> drawNoteHelper state.ui.currentPlayBackNote state.ui.selectedNote )
+  -- runSignal (app.state ~> \state -> MidiPlayer.logger state.ui.melody )
   -- runSignal (app.state ~> \x -> drawNoteHelper x.ui.selectedNote)
   -- runSignal (userInputSubscription ~> \userNote -> drawNoteHelper userNote)
+
+
   return app
 
 playBackNoteSignal :: forall e. Eff (heartbeat :: HEARTBEAT, channel :: CHANNEL | e) (Channel MidiNote)
@@ -105,3 +113,19 @@ incrementPlayIndex n = Child (UI.IncrementPlayBackIndex)
 
 playBackAction :: Int -> App.Layout.Action
 playBackAction n = Child (UI.UserNote n)
+
+trigger :: App.Layout.Action
+trigger = Child (UI.SetUserMelody)
+
+trigger2 :: App.Layout.Action
+trigger2 = Child (UI.SetUserMelody2)
+
+-- matchUserInput :: MidiNote -> Array MidiNote -> App.Layout.Action
+-- matchUserInput userNote playBackNotes = if currentNote == Nothing then
+--                                           Child (UI.SetUserMelody NoteHelper.melody)
+--                                         else if (Just userNote) == currentNote then
+--                                           Child (UI.SetUserMelody $ fromJust $ Data.Array.tail playBackNotes)
+--                                         else
+--                                           Child (UI.SetUserMelody playBackNotes)
+--   where
+--     currentNote = Data.Array.head playBackNotes
