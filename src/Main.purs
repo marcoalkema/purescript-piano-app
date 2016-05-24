@@ -117,8 +117,6 @@ playBackAction n = Child (UI.UserNote n)
 trigger :: App.Layout.Action
 trigger = Child (UI.SetUserMelody)
 
-trigger2 :: App.Layout.Action
-trigger2 = Child (UI.SetUserMelody2)
 
 -- matchUserInput :: MidiNote -> Array MidiNote -> App.Layout.Action
 -- matchUserInput userNote playBackNotes = if currentNote == Nothing then

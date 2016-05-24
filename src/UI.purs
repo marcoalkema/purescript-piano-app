@@ -20,7 +20,7 @@ import VexFlow
 
 --kip
 
-data Action = PianoKeyPressed Note Int | PianoKeyUp | PlayButtonPressed | PauseButtonPressed | LoopButtonPressed | MuteButtonPressed | NoteHelperResize | Piano Int | IncrementPlayBackIndex | UserNote Int | SetUserMelody | SetUserMelody2
+data Action = PianoKeyPressed Note Int | PianoKeyUp | PlayButtonPressed | PauseButtonPressed | LoopButtonPressed | MuteButtonPressed | NoteHelperResize | Piano Int | IncrementPlayBackIndex | UserNote Int | SetUserMelody | ResetMelody
 
 data Note = NoteC | NoteCis | NoteD | NoteDis | NoteE | NoteF | NoteFis | NoteG | NoteGis | NoteA | NoteAis | NoteB
 
@@ -58,12 +58,13 @@ update IncrementPlayBackIndex state = state { currentPlayBackNoteIndex = state.c
 update (UserNote n) state           = state { currentPlayBackNotes     = n }
 -- update SetUserMelody state          = state { currentPlayBackNote      = fromJust $ Data.Array.head state.userMelody })
 update SetUserMelody state         = setMelody state
+update ResetMelody state           = state { userMelody = state.melody }
 -- update SetUserMelody2 state         = state { currentPlayBackNote      = fromJust $ Data.Array.head state.userMelody } 
 
 init :: State
 init = { currentPlayBackNotes     : 0
        , currentUserNotes         : []
-       , selectedNote             : 0
+       , selectedNote             : 48
        , noteHelperActivated      : true
        , playButtonPressed        : false
        , pauseButtonPressed       : false
@@ -204,7 +205,7 @@ buttons = [ Pux.div [ onClick $ const PlayButtonPressed
                                                                     , style { maxHeight : "100%"
                                                                             , maxWidth  : "100%" 
                                                                             } ] [] ]
-          , Pux.div [ onClick $ const LoopButtonPressed
+          , Pux.div [ onClick $ const ResetMelody
                     , style { height     : "100%"
                             , width      : "15%"
                             , marginLeft : "10%"
