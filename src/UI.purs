@@ -20,7 +20,7 @@ import VexFlow
 
 --kip
 
-data Action = PianoKeyPressed Note Int | PianoKeyUp | PlayButtonPressed | PauseButtonPressed | LoopButtonPressed | MuteButtonPressed | NoteHelperResize | Piano Int | IncrementPlayBackIndex | UserNote Int | SetUserMelody | ResetMelody
+data Action = PlayButtonPressed | PauseButtonPressed | LoopButtonPressed | MuteButtonPressed | NoteHelperResize | IncrementPlayBackIndex | SetUserMelody | ResetMelody | SetMidiKeyBoardInput MidiNote | PianoKeyPressed Note Octave | SetPlayBackNote MidiNote
 
 data Note = NoteC | NoteCis | NoteD | NoteDis | NoteE | NoteF | NoteFis | NoteG | NoteGis | NoteA | NoteAis | NoteB
 
@@ -31,69 +31,72 @@ type CurrentUserNote     = MidiNote
 
 
 -- TODO: Separate states for ddifferent domains --> Create new / domain-specific states!!!
-type State = { currentPlayBackNotes     :: MidiNote
-             , currentUserNotes         :: Array MidiNote
-             , selectedNote             :: MidiNote 
+-- Replace some MidiNotes for Array MidiNote
+type State = { currentMidiKeyboardInput :: MidiNote
+             , currentUIPianoSelection  :: MidiNote
+             , currentPlayBackNote      :: MidiNote
+             , currentPlayBackNoteIndex :: Int
+               
+             , currentPlayBackMelody    :: Array MidiNote
+             , userMelody               :: Array MidiNote
+             , currentUserMelodyHead    :: MidiNote
+               
              , noteHelperActivated      :: Boolean
              , playButtonPressed        :: Boolean
              , pauseButtonPressed       :: Boolean
              , loopButtonPressed        :: Boolean
-             , muteButtonPressed        :: Boolean
-             , currentPlayBackNoteIndex :: Int
-             , currentPlayBackNote      :: Int
-             , userNote                 :: Int
-             , melody                   :: Array MidiNote
-             , userMelody               :: Array MidiNote}
+             , muteButtonPressed        :: Boolean}
 
 update :: Action -> State -> State
+
+update (SetMidiKeyBoardInput n) state = state { currentMidiKeyboardInput = n }
+update (PianoKeyPressed x y) state    = state { currentUIPianoSelection  = toMidiNote x y }
+update (SetPlayBackNote n) state      = state { currentPlayBackNote      = n }
+update IncrementPlayBackIndex state   = state { currentPlayBackNoteIndex = state.currentPlayBackNoteIndex + 1 }
+
+update SetUserMelody state            = setMelody state
+update ResetMelody state              = state { userMelody = state.userMelody }
+
 update PlayButtonPressed state      = state { playButtonPressed        = not state.playButtonPressed  }
 update PauseButtonPressed state     = state { pauseButtonPressed       = not state.pauseButtonPressed }
 update LoopButtonPressed state      = state { loopButtonPressed        = not state.loopButtonPressed  }
 update MuteButtonPressed state      = state { muteButtonPressed        = not state.muteButtonPressed  }
-update NoteHelperResize state       = state { noteHelperActivated      = not state.noteHelperActivated}
-update PianoKeyUp state             = state { noteHelperActivated      = state.noteHelperActivated}
-update (PianoKeyPressed x y) state  = state { selectedNote             = toMidiNote x y }
-update (Piano n) state              = state { selectedNote             = n }
-update IncrementPlayBackIndex state = state { currentPlayBackNoteIndex = state.currentPlayBackNoteIndex + 1 }
-update (UserNote n) state           = state { currentPlayBackNotes     = n }
--- update SetUserMelody state          = state { currentPlayBackNote      = fromJust $ Data.Array.head state.userMelody })
-update SetUserMelody state         = setMelody state
-update ResetMelody state           = state { userMelody = state.melody }
--- update SetUserMelody2 state         = state { currentPlayBackNote      = fromJust $ Data.Array.head state.userMelody } 
+update NoteHelperResize state       = state { noteHelperActivated      = not state.noteHelperActivated }
+
 
 init :: State
-init = { currentPlayBackNotes     : 0
-       , currentUserNotes         : []
-       , selectedNote             : 48
+init = { currentMidiKeyboardInput : 0
+       , currentUIPianoSelection  : 48
+       , currentPlayBackNote      : fromJust $ Data.Array.head NoteHelper.melody
+       , currentPlayBackNoteIndex : 0
+
+       , currentPlayBackMelody    : NoteHelper.melody
+       , userMelody               : NoteHelper.melody
+       , currentUserMelodyHead    : fromJust $ Data.Array.head NoteHelper.melody
+         
        , noteHelperActivated      : true
        , playButtonPressed        : false
        , pauseButtonPressed       : false
        , loopButtonPressed        : false
-       , muteButtonPressed        : false
-       , currentPlayBackNoteIndex : 0
-       , currentPlayBackNote      : fromJust $ Data.Array.head NoteHelper.melody
-       , userNote                 : 0
-       , melody                   : NoteHelper.melody
-       , userMelody               : NoteHelper.melody }
+       , muteButtonPressed        : false }
 
 setMelody :: State -> State
-setMelody state = { currentPlayBackNotes     : state.currentPlayBackNotes
-                  , currentUserNotes         : state.currentUserNotes
-                  , selectedNote             : state.selectedNote
+setMelody state = { currentMidiKeyboardInput : state.currentMidiKeyboardInput
+                  , currentUIPianoSelection  : state.currentUIPianoSelection
+                  , currentPlayBackNote      : state.currentPlayBackNote
+                  , currentPlayBackNoteIndex : state.currentPlayBackNoteIndex
+
+                  , currentPlayBackMelody    : state.currentPlayBackMelody
+                  , userMelody               : newMelody 
+                  , currentUserMelodyHead    : fromJust $ Data.Array.head newMelody
+                    
                   , noteHelperActivated      : state.noteHelperActivated
                   , playButtonPressed        : state.playButtonPressed
                   , pauseButtonPressed       : state.pauseButtonPressed
                   , loopButtonPressed        : state.loopButtonPressed
-                  , muteButtonPressed        : state.muteButtonPressed
-                  , currentPlayBackNoteIndex : state.currentPlayBackNoteIndex
-                  , currentPlayBackNote      : fromJust $ Data.Array.head newMelody
-                  , userNote                 : state.userNote
-                  , melody                   : state.melody
-                  , userMelody               : newMelody }
+                  , muteButtonPressed        : state.muteButtonPressed }
   where
-    newMelody = matchUserInput state.selectedNote state.userMelody
-
-                    
+    newMelody = matchUserInput state.currentMidiKeyboardInput state.userMelody
 
 matchUserInput :: MidiNote -> Array MidiNote -> Array MidiNote
 matchUserInput userNote playBackNotes = if currentNote == Nothing then
@@ -157,12 +160,15 @@ view state  = do
                                                                                    , height "1000%"
                                                                                    , width "1240%" ] [text "HOI"] ]
                              , Pux.div [ style { height     : "6%"
-                                               , fontSize   : "33"  
+                                               -- , fontSize   : "33"  
                                                , width      : "100%"
                                                , background : "#F4F4F4"
                                                } ] [ text $ "Currently selected note : " ++ show state.userMelody
-                                                   , text $ show state.selectedNote
-                                                   , text $ "        " ++ show state.currentPlayBackNote]
+                                                   , text $ "        " ++ show state.currentUserMelodyHead
+                                                   , text $ "        " ++ show state.currentMidiKeyboardInput
+                                                   , text $ "        " ++ show state.currentUIPianoSelection
+                                                   , text $ "        " ++ show state.currentPlayBackNote
+                                                   , text $ "        " ++ show state.currentPlayBackNoteIndex ]
                              , Pux.div [ style { height     : "20%"
                                                , width      : noteHelperDivSize state.noteHelperActivated ++ "%"
                                                , position   : "absolute"
@@ -240,7 +246,7 @@ octaves :: Octave -> Array Octave
 octaves n = range 1 (round (max (toNumber 1) (abs $ toNumber n)))
                
 drawOctaves :: State -> Array (Html Action)
-drawOctaves state = map (\x -> drawOctave x state.currentPlayBackNotes state.currentUserNotes state.selectedNote) (octaves octaveNumber)
+drawOctaves state = map (\x -> drawOctave x state.currentPlayBackNote [state.currentMidiKeyboardInput] state.currentUIPianoSelection) (octaves octaveNumber)
                     
 drawOctave :: Octave  -> MidiNote -> Array MidiNote -> MidiNote -> (Html Action)
 drawOctave oct notePlayed userNote selectedNote = Pux.div [] (drawKeys oct notePlayed userNote selectedNote)
@@ -249,8 +255,8 @@ drawKeys :: Octave -> MidiNote -> Array MidiNote -> MidiNote -> Array (Html Acti
 drawKeys octave notePlayed userNote selectedNote  = map (\pos -> drawKey pos octave notePlayed userNote selectedNote) positions
 
 drawKey :: PosRec -> Octave -> MidiNote -> Array MidiNote -> MidiNote -> Html Action                          
-drawKey posRec octave notePlayed userNote selectedNote = (Pux.div [ onMouseDown (const (PianoKeyPressed posRec.note octave) )
-                                                                  , onMouseUp   (const PianoKeyUp)
+drawKey posRec octave notePlayed userNote selectedNote = (Pux.div [ onMouseDown (const (PianoKeyPressed posRec.note octave))
+                                                                  -- , onMouseDown (const SetUserMelody)
                                                                   , styles posRec octave notePlayed userNote] [Pux.img [ src $ ((++) (getColor posRec) $ keyStatus posRec octave notePlayed userNote selectedNote) ++ keyShadow posRec octave
                                                                                                                        , style { height : "100%"
                                                                                                                                , width  : "100%"
