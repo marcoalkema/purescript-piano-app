@@ -2,7 +2,8 @@ module Main where
 
 import App.Routes (match)
 import App.Layout (Action(PageView), State, view, update)
-import Control.Monad.Eff (Eff)
+import Control.Monad.Eff
+import DOM.Timer
 import Control.Monad.Eff.Class 
 import DOM (DOM)
 -- import Prelude (bind, return, (++), show, not, unit, ($), (<$>), (<<<), map, (<>), (==), pure, (>))
@@ -35,6 +36,8 @@ import MidiToVexFlow
 import Quantizer
 import Data.Tuple
 import Data.Foreign
+import ColorNotation
+import Qambi
 
 type AppEffects = (dom :: DOM)
 type MidiNote = Int
@@ -42,13 +45,17 @@ type MidiNote = Int
 -- Entry point for the browser.
 -- main :: forall e. State -> Eff (heartbeat :: HEARTBEAT, console :: CONSOLE, dom :: DOM, channel :: CHANNEL, err :: EXCEPTION, vexFlow :: VEXFLOW, midi :: MidiPlayer.MIDI, canvas :: ClearCanvas.CANVAS | e) (App State Action)
 main state = do
-  sequencer <- runAff throwException (const $ log "All ok") getSequencer
 
+  MidiPlayer.loadFile midiFile
+  MidiPlayer.loadPlugin { soundfontUrl : "midi/examples/soundfont/"
+                        , instrument   : "acoustic_grand_piano" }
+    (logger "hoi")
+    
   urlSignal <- sampleUrl
   let routeSignal :: Signal Action
       routeSignal = urlSignal ~> \r -> PageView (match r)
 
-  playBackChannel <- playBackNoteSignal sequencer
+  playBackChannel <- playBackNoteSignal
   let trackSubscription :: Signal MidiNote
       trackSubscription       = subscribe playBackChannel
       incrementPlayBackSignal = trackSubscription ~> \midiNote -> incrementPlayIndex midiNote
@@ -56,61 +63,51 @@ main state = do
   runSignal (trackSubscription ~> \x -> MidiPlayer.logger x)
   -- runSignal (trackSubscription ~> \midiNote -> playNote midiNote sequencer)
 
-  -- userChannel <- userNoteSignal sequencer
-  -- let userInputSubscription :: Signal MidiNote
-  --     userInputSubscription = subscribe userChannel
-  --     userInputSignal       = userInputSubscription ~> \midiNote -> setCurrentKeyBoardInput midiNote
-  --     triggerSignal         = userInputSubscription ~> \midiNote -> setUserMelody
-  -- -- runSignal (userInputSubscription ~> \midiNote -> MidiPlayer.logger midiNote)
-  -- runSignal (userInputSubscription ~> \midiNote -> playNote midiNote sequencer)
-  
+  userChannel <- userNoteSignal
+  let userInputSubscription :: Signal MidiNote
+      userInputSubscription = subscribe userChannel
+      userInputSignal       = userInputSubscription ~> \midiNote -> setCurrentKeyBoardInput midiNote
+      triggerSignal         = userInputSubscription ~> \midiNote -> setUserMelody
+  runSignal (userInputSubscription ~> \midiNote -> MidiPlayer.logger midiNote)
 
-  midiChannel <- midiDataSignal
-  let midiDataSubscription :: Signal (Array Foreign)
-      midiDataSubscription = subscribe midiChannel
-      midiDataSignal       = midiDataSubscription ~> \dat -> logger dat
+  -- midiChannel <- midiDataSignal
+  -- let midiDataSubscription :: Signal (Array Foreign)
+  --     midiDataSubscription = subscribe midiChannel
+  --     midiDataSignal       = midiDataSubscription ~> \dat -> logger dat
   
   app <- start
     { initialState: state
     , update:
       fromSimple update
     , view: view
-    , inputs: [fromJust $ mergeMany [routeSignal, playBackSignal]]
+    , inputs: [fromJust $ mergeMany [routeSignal, playBackSignal, incrementPlayBackSignal, userInputSignal, triggerSignal]]
     }
 
   renderToDOM "#app" app.html
 
-  -- MidiPlayer.loadFile midiFile
-  -- foo <- runAff throwException (const $ log "Cool.") MidiPlayer.getData2
-  -- logger foo
-
-  canvas <- createCanvas "notationCanvas"
-  MidiPlayer.loadFile midiFile
-  MidiPlayer.loadPlugin { soundfontUrl : "midi/examples/soundfont/"
-                        , instrument   : "acoustic_grand_piano" }
-    (const (MidiPlayer.getData >>= (renderMidi canvas ColorNotation.foo2))
-    )
 
   runSignal (app.state ~> \state -> drawNoteHelper state.ui.currentPlayBackNote state.ui.currentMidiKeyboardInput )
+  runSignal (app.state ~> \state -> draw state.ui.currentPlayBackNoteIndex)
 
-  -- runSignal (app.state ~> \state -> playNote state.ui.currentMidiKeyboardInput sequencer)
-
-  logger ColorNotation.foo2
+  loadHeartBeat midiFile (send playBackChannel) (send userChannel)
   
   return app
 
-
+draw n = do
+  canvas <- createCanvas "notationCanvas"
+  timeout 500 (MidiPlayer.getData >>= (renderMidi canvas n))
+  return unit
 
 
 -- playBackNoteSignal :: forall e. Eff (heartbeat :: HEARTBEAT, channel :: CHANNEL | e) (Channel MidiNote)
-playBackNoteSignal sequencer = do 
+playBackNoteSignal = do 
   chan <- channel 0
   let mail = send chan
-  HeartBeat.loadFile midiFile mail sequencer
+  -- HeartBeat.loadFile midiFile mail sequencer
   return chan
 
 -- userNoteSignal :: forall e. Eff (heartbeat :: HEARTBEAT, channel :: CHANNEL | e) (Channel MidiNote)
-userNoteSignal sequencer = do 
+userNoteSignal = do 
   chan <- channel 0
   let mail = send chan
   return chan
@@ -120,7 +117,7 @@ userNoteSignal sequencer = do
 midiDataSignal  = do
   chan <- channel []
   let mail = send chan
-  MidiPlayer.loadFile2 midiFile (MidiPlayer.getData2 send)
+  -- MidiPlayer.loadFile2 midiFile (MidiPlayer.getData2 send)
   return chan
 
 midiFile = "colorTest4.mid"
@@ -155,7 +152,3 @@ setCurrentPlayBackNote n = Child (UI.SetPlayBackNote n)
 
 setUserMelody :: App.Layout.Action
 setUserMelody = Child (UI.SetUserMelody)
-
-
-
-

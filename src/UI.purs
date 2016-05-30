@@ -18,9 +18,7 @@ import NoteHelper
 import Data.Maybe
 import VexFlow
 
---kip
-
-data Action = PlayButtonPressed | PauseButtonPressed | LoopButtonPressed | MuteButtonPressed | NoteHelperResize | IncrementPlayBackIndex | SetUserMelody | ResetMelody | SetMidiKeyBoardInput MidiNote | PianoKeyPressed Note Octave | SetPlayBackNote MidiNote
+data Action = PlayButtonPressed | PauseButtonPressed | LoopButtonPressed | MuteButtonPressed | MetronomeButtonPressed | NoteHelperResize | IncrementPlayBackIndex | SetUserMelody | ResetMelody | SetMidiKeyBoardInput MidiNote | PianoKeyPressed Note Octave | SetPlayBackNote MidiNote
 
 data Note = NoteC | NoteCis | NoteD | NoteDis | NoteE | NoteF | NoteFis | NoteG | NoteGis | NoteA | NoteAis | NoteB
 
@@ -44,8 +42,8 @@ type State = { currentMidiKeyboardInput :: MidiNote
              , noteHelperActivated      :: Boolean
              , playButtonPressed        :: Boolean
              , pauseButtonPressed       :: Boolean
-             , loopButtonPressed        :: Boolean
-             , muteButtonPressed        :: Boolean}
+             , metronomeButtonPressed   :: Boolean
+             , loopButtonPressed        :: Boolean }
 
 update :: Action -> State -> State
 
@@ -59,8 +57,10 @@ update ResetMelody state              = state { userMelody = state.userMelody }
 
 update PlayButtonPressed state      = state { playButtonPressed        = not state.playButtonPressed  }
 update PauseButtonPressed state     = state { pauseButtonPressed       = not state.pauseButtonPressed }
-update LoopButtonPressed state      = state { loopButtonPressed        = not state.loopButtonPressed  }
-update MuteButtonPressed state      = state { muteButtonPressed        = not state.muteButtonPressed  }
+update LoopButtonPressed state      = state { metronomeButtonPressed   = not state.metronomeButtonPressed  }
+update MuteButtonPressed state      = state { loopButtonPressed        = not state.loopButtonPressed  }
+update MetronomeButtonPressed state = state { metronomeButtonPressed   = not state.metronomeButtonPressed  }
+
 update NoteHelperResize state       = state { noteHelperActivated      = not state.noteHelperActivated }
 
 
@@ -77,8 +77,8 @@ init = { currentMidiKeyboardInput : 0
        , noteHelperActivated      : true
        , playButtonPressed        : false
        , pauseButtonPressed       : false
-       , loopButtonPressed        : false
-       , muteButtonPressed        : false }
+       , metronomeButtonPressed   : false
+       , loopButtonPressed        : false }
 
 setMelody :: State -> State
 setMelody state = { currentMidiKeyboardInput : state.currentMidiKeyboardInput
@@ -93,8 +93,8 @@ setMelody state = { currentMidiKeyboardInput : state.currentMidiKeyboardInput
                   , noteHelperActivated      : state.noteHelperActivated
                   , playButtonPressed        : state.playButtonPressed
                   , pauseButtonPressed       : state.pauseButtonPressed
-                  , loopButtonPressed        : state.loopButtonPressed
-                  , muteButtonPressed        : state.muteButtonPressed }
+                  , metronomeButtonPressed   : state.metronomeButtonPressed
+                  , loopButtonPressed        : state.loopButtonPressed }
   where
     newMelody = matchUserInput state.currentMidiKeyboardInput state.userMelody
 
@@ -134,10 +134,36 @@ view state  = do
                                                                                              , display     : "inline-block" }] [ 
                                                                                                                                Pux.div [style { height      : "100%"
                                                                                                                                               , width       : "100%"
-                                                                                                                                                }] buttons ]
+                                                                                                                                                }] (buttons state) ]
                                                                             , Pux.div [style { height      : "100%"
                                                                                              , width       : "33%"
                                                                                              , display     : "inline-block"} ] [] ]
+                             , Pux.div [ id_ "metronomeWindow"
+                                       , style { height     : resizeMetronomeWindow state.metronomeButtonPressed
+                                               , width      : "100%"
+                                               , position   : "absolute"
+                                               , left       : "0%"
+                                               , background : "#DDDDDD"
+                                               , border     : "2px solid #ddd"
+                                               , bottom     : "21%"
+                                               , overflow   : "scroll" }] [Pux.Html.Elements.label [] [ Pux.div [style { height      : "100%"
+                                                                                                                       , width       : "100%" }] [text "tempo: 120bpm"]
+                                                                                                      , Pux.Html.Elements.input [ type_ "range"
+                                                                                                                                , id_ "tempo"
+                                                                                                                                , Pux.Html.Attributes.min "0"
+                                                                                                                                , Pux.Html.Attributes.max "1"
+                                                                                                                                , Pux.Html.Attributes.step "0.01"
+                                                                                                                                , Pux.Html.Attributes.defaultValue "0"
+                                                                                                                                -- , Pux.Html.Events.onChange 
+                                                                                                                                ] []
+                                                                                                      ]
+                                                                          , Pux.Html.Elements.script [] [text  "<script>function (){var bpm;sliderTempo = createSlider({slider: document.getElementById('tempo'),min: 10,max: 600,step: 1,message: 'tempo: {value}bpm',onMouseMove: handle,onMouseDown: handle,onMouseUp: process,onMouseMove: handle,onMouseDown: handle,onMouseUp: process});sliderTempo.setValue(120);sliderTempo.setLabel(120);function handle(value){bpm = value;console.log(bpm);sliderTempo.setLabel(value);}function process(){song.setTempo(bpm);}};</script>"]
+                                                                          ]
+                               
+                             
+
+-- <div>tempo: 120bpm</div><input type="range" id="tempo" min="0" max="1" step="0.01" value="0"/>
+                               
                              , Pux.div [ id_ "fooBar"
                                        , style { height     : "1%"
                                                , width      : "100%"
@@ -191,17 +217,19 @@ view state  = do
                              ]
                             ) ]
 
-buttons = [ Pux.div [ onClick $ const PlayButtonPressed
-                    , style { height     : "100%"
-                            , width      : "15%"
-                            , marginLeft : "10%"
-                            , display    : "inline"
-                            , float      : "left"
-                            , position   : "relative" } ] [ Pux.img [ src "play.png"
-                                                                    , style { maxHeight : "100%"
-                                                                            , maxWidth  : "100%" 
-                                                                            } ] [] ]
-          , Pux.div [ onClick $ const PauseButtonPressed
+buttons state = [ Pux.div [ id_ "Play_button"
+                          , onClick $ const PlayButtonPressed
+                          , style { height     : "100%"
+                                  , width      : "15%"
+                                  , marginLeft : "10%"
+                                  , display    : "inline"
+                                  , float      : "left"
+                                  , position   : "relative" } ] [ Pux.img [ src "play.png"
+                                                                          , style { maxHeight : "100%"
+                                                                                  , maxWidth  : "100%" 
+                                                                                  } ] [] ]
+          , Pux.div [ id_ "Pause_button"
+                    , onClick $ const PauseButtonPressed
                     , style { height     : "100%"
                             , width      : "15%"
                             , marginLeft : "10%"
@@ -211,7 +239,19 @@ buttons = [ Pux.div [ onClick $ const PlayButtonPressed
                                                                     , style { maxHeight : "100%"
                                                                             , maxWidth  : "100%" 
                                                                             } ] [] ]
-          , Pux.div [ onClick $ const ResetMelody
+          , Pux.div [ id_ "Metronome"
+                    , onClick $ const MetronomeButtonPressed
+                    , style { height     : "100%"
+                            , width      : "15%"
+                            , marginLeft : "10%"
+                            , display    : "inline"
+                            , float      : "left"
+                            , position   : "relative" } ] [ Pux.img [ src $ metronomeButtonPressed state.metronomeButtonPressed
+                                                                    , style { maxHeight : "100%"
+                                                                            , maxWidth  : "100%" 
+                                                                            } ] [] ]
+          , Pux.div [ id_ "Loop_button"
+                    , onClick $ const MuteButtonPressed
                     , style { height     : "100%"
                             , width      : "15%"
                             , marginLeft : "10%"
@@ -221,17 +261,18 @@ buttons = [ Pux.div [ onClick $ const PlayButtonPressed
                                                                     , style { maxHeight : "100%"
                                                                             , maxWidth  : "100%" 
                                                                             } ] [] ]
-          , Pux.div [ onClick $ const MuteButtonPressed
-                    , style { height     : "100%"
-                            , width      : "15%"
-                            , marginLeft : "10%"
-                            , display    : "inline"
-                            , float      : "left"
-                            , position   : "relative" } ] [ Pux.img [ src "mute.png"
-                                                                    , style { maxHeight : "100%"
-                                                                            , maxWidth  : "100%" 
-                                                                            } ] [] ]
             ]
+          
+metronomeButtonPressed b = if b then
+                             "metronome_pressed.png"
+                           else
+                             "metronome.png"
+
+resizeMetronomeWindow b = if b then
+                            "5%"
+                          else
+                            "0"
+
 
 noteHelperSize :: Boolean -> String
 noteHelperSize isActivated = if isActivated then "100" else "0"
@@ -256,11 +297,14 @@ drawKeys octave notePlayed userNote selectedNote  = map (\pos -> drawKey pos oct
 
 drawKey :: PosRec -> Octave -> MidiNote -> Array MidiNote -> MidiNote -> Html Action                          
 drawKey posRec octave notePlayed userNote selectedNote = (Pux.div [ onMouseDown (const (PianoKeyPressed posRec.note octave))
+                                                                  , id_ $ "pianoKey" ++ (show $ toMidiNote posRec.note octave)
                                                                   -- , onMouseDown (const SetUserMelody)
                                                                   , styles posRec octave notePlayed userNote] [Pux.img [ src $ ((++) (getColor posRec) $ keyStatus posRec octave notePlayed userNote selectedNote) ++ keyShadow posRec octave
                                                                                                                        , style { height : "100%"
                                                                                                                                , width  : "100%"
                                                                                                                                , overflow : "hidden" } ] []  ])
+setPianoId :: Octave -> MidiNote -> Int
+setPianoId o n = (12 * o) + n
 
 getColor :: PosRec -> String
 getColor posRec =  if posRec.isBlack then "black" else "white"

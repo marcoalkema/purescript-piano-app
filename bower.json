@@ -22,7 +22,8 @@
     "purescript-functions": "^0.1.0",
     "purescript-console": "^0.1.1",
     "purescript-foldable-traversable": "^0.4.2",
-    "purescript-maybe": "^0.3.5"
+    "purescript-maybe": "^0.3.5",
+    "purescript-timers": "^1.0.0"
   },
   "devDependencies": {
     "purescript-affjax": "^0.12.0",
