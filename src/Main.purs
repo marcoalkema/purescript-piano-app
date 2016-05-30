@@ -51,9 +51,9 @@ main state = do
   playBackChannel <- playBackNoteSignal sequencer
   let trackSubscription :: Signal MidiNote
       trackSubscription       = subscribe playBackChannel
-      incrementPlayBackSignal = trackSubscription ~> \midiNote -> incrementPlayIndex midiNote
-      playBackSignal          = trackSubscription ~> \midiNote -> setCurrentPlayBackNote midiNote
-  runSignal (trackSubscription ~> \x -> MidiPlayer.logger x)
+      incrementPlayBackSignal = trackSubscription ~> incrementPlayIndex
+      playBackSignal          = trackSubscription ~> setCurrentPlayBackNote
+  runSignal (trackSubscription ~> MidiPlayer.logger)
   -- runSignal (trackSubscription ~> \midiNote -> playNote midiNote sequencer)
 
   -- userChannel <- userNoteSignal sequencer
@@ -68,14 +68,14 @@ main state = do
   midiChannel <- midiDataSignal
   let midiDataSubscription :: Signal (Array Foreign)
       midiDataSubscription = subscribe midiChannel
-      midiDataSignal       = midiDataSubscription ~> \dat -> logger dat
+      midiDataSignal       = midiDataSubscription ~> logger
   
   app <- start
     { initialState: state
     , update:
       fromSimple update
     , view: view
-    , inputs: [fromJust $ mergeMany [routeSignal, playBackSignal]]
+    , inputs: [routeSignal `merge` playBackSignal]
     }
 
   renderToDOM "#app" app.html
