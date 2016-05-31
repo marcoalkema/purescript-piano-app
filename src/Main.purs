@@ -88,13 +88,11 @@ main state = do
   runSignal (app.state ~> \state -> drawNoteHelper state.ui.currentPlayBackNote state.ui.currentMidiKeyboardInput )
   loadHeartBeat midiFile (send playBackChannel) (send userChannel)
   runSignal (app.state ~> \state -> draw state.ui.currentPlayBackNoteIndex)
-
-
   
   return app
 
 draw n = do
-  clearRect "notationCanvas"
+  clearCanvas "notationCanvas"
   canvas <- createCanvas "notationCanvas"
   midiData <- MidiPlayer.getData
   renderMidi canvas n midiData
@@ -105,7 +103,6 @@ draw n = do
 playBackNoteSignal = do 
   chan <- channel 0
   let mail = send chan
-  -- HeartBeat.loadFile midiFile mail sequencer
   return chan
 
 -- userNoteSignal :: forall e. Eff (heartbeat :: HEARTBEAT, channel :: CHANNEL | e) (Channel MidiNote)
