@@ -94,6 +94,7 @@ main state = do
   return app
 
 draw n = do
+  clearRect "notationCanvas"
   canvas <- createCanvas "notationCanvas"
   midiData <- MidiPlayer.getData
   renderMidi canvas n midiData
