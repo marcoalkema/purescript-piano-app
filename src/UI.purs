@@ -17,8 +17,9 @@ import MidiPlayer
 import NoteHelper
 import Data.Maybe
 import VexFlow
+import Data.Foreign
 
-data Action = PlayButtonPressed | PauseButtonPressed | LoopButtonPressed | MuteButtonPressed | MetronomeButtonPressed | NoteHelperResize | IncrementPlayBackIndex | SetUserMelody | ResetMelody | SetMidiKeyBoardInput MidiNote | PianoKeyPressed Note Octave | SetPlayBackNote MidiNote
+data Action = PlayButtonPressed | PauseButtonPressed | StopButtonPressed | LoopButtonPressed | MuteButtonPressed | MetronomeButtonPressed | NoteHelperResize | IncrementPlayBackIndex | SetUserMelody | ResetMelody | SetMidiKeyBoardInput MidiNote | PianoKeyPressed Note Octave | SetPlayBackNote MidiNote | SetMidiData (Array Foreign)
 
 data Note = NoteC | NoteCis | NoteD | NoteDis | NoteE | NoteF | NoteFis | NoteG | NoteGis | NoteA | NoteAis | NoteB
 
@@ -38,10 +39,13 @@ type State = { currentMidiKeyboardInput :: MidiNote
              , currentPlayBackMelody    :: Array MidiNote
              , userMelody               :: Array MidiNote
              , currentUserMelodyHead    :: MidiNote
+
+             , midiData                 :: Array Foreign
                
              , noteHelperActivated      :: Boolean
              , playButtonPressed        :: Boolean
              , pauseButtonPressed       :: Boolean
+             , stopButtonPressed        :: Boolean
              , metronomeButtonPressed   :: Boolean
              , loopButtonPressed        :: Boolean }
 
@@ -56,6 +60,8 @@ update SetUserMelody state            = setMelody state
 update ResetMelody state              = state { userMelody = state.userMelody }
 
 update PlayButtonPressed state      = state { playButtonPressed        = not state.playButtonPressed  }
+update StopButtonPressed state      = state { stopButtonPressed        = not state.playButtonPressed
+                                            , currentPlayBackNoteIndex = -1 }
 update PauseButtonPressed state     = state { pauseButtonPressed       = not state.pauseButtonPressed }
 update LoopButtonPressed state      = state { metronomeButtonPressed   = not state.metronomeButtonPressed  }
 update MuteButtonPressed state      = state { loopButtonPressed        = not state.loopButtonPressed  }
@@ -63,20 +69,25 @@ update MetronomeButtonPressed state = state { metronomeButtonPressed   = not sta
 
 update NoteHelperResize state       = state { noteHelperActivated      = not state.noteHelperActivated }
 
+update (SetMidiData d) state       = state { midiData      = d }
+
 
 init :: State
-init = { currentMidiKeyboardInput : 0
+init = { currentMidiKeyboardInput : 48
        , currentUIPianoSelection  : 48
        , currentPlayBackNote      : fromJust $ Data.Array.head NoteHelper.melody
-       , currentPlayBackNoteIndex : 0
+       , currentPlayBackNoteIndex : -1
 
        , currentPlayBackMelody    : NoteHelper.melody
        , userMelody               : NoteHelper.melody
        , currentUserMelodyHead    : fromJust $ Data.Array.head NoteHelper.melody
+
+       , midiData                 : []
          
        , noteHelperActivated      : true
        , playButtonPressed        : false
        , pauseButtonPressed       : false
+       , stopButtonPressed       : false
        , metronomeButtonPressed   : false
        , loopButtonPressed        : false }
 
@@ -89,10 +100,13 @@ setMelody state = { currentMidiKeyboardInput : state.currentMidiKeyboardInput
                   , currentPlayBackMelody    : state.currentPlayBackMelody
                   , userMelody               : newMelody 
                   , currentUserMelodyHead    : fromJust $ Data.Array.head newMelody
+
+                  , midiData                 : state.midiData
                     
                   , noteHelperActivated      : state.noteHelperActivated
                   , playButtonPressed        : state.playButtonPressed
                   , pauseButtonPressed       : state.pauseButtonPressed
+                  , stopButtonPressed        : state.stopButtonPressed
                   , metronomeButtonPressed   : state.metronomeButtonPressed
                   , loopButtonPressed        : state.loopButtonPressed }
   where
@@ -127,27 +141,71 @@ view state  = do
                              , Pux.div [ style { height     : "6%"
                                                , width      : "100%"
                                                , background : "#F4F4F4" } ] [ Pux.div [style { height      : "100%"
-                                                                                             , width       : "33%"
+                                                                                             , width       : "25%"
                                                                                              , display     : "inline-block"}] []
                                                                             , Pux.div [style { height      : "100%"
-                                                                                             , width       : "33%"
+                                                                                             , width       : "25%"
                                                                                              , display     : "inline-block" }] [ 
                                                                                                                                Pux.div [style { height      : "100%"
                                                                                                                                               , width       : "100%"
                                                                                                                                                 }] (buttons state) ]
                                                                             , Pux.div [style { height      : "100%"
-                                                                                             , width       : "33%"
-                                                                                             , display     : "inline-block"} ] [] ]
+                                                                                             , width       : "25%"
+                                                                                             , display     : "inline-block"} ] [ Pux.div [ id_ "Record_button"
+                                                                                                                                         , onClick $ const PauseButtonPressed
+                                                                                                                                         , style { height     : "100%"
+                                                                                                                                                 , width      : "15%"
+                                                                                                                                                 , marginLeft : "10%"
+                                                                                                                                                 , display    : "inline"
+                                                                                                                                                 , float      : "left"
+                                                                                                                                                 , position   : "relative" } ] [ Pux.img [ src "record.png"
+                                                                                                                                                                                         , style { maxHeight : "100%"
+                                                                                                                                                                                                 , maxWidth  : "100%" 
+                                                                                                                                                                                                 } ] [] ]] 
+                                                                            , Pux.div [style { height      : "100%"
+                                                                                             , width       : "25%"
+                                                                                             , display     : "inline-block"} ] [ Pux.div [ id_ "Metronome"
+                                                                                                                                         , onClick $ const MetronomeButtonPressed
+                                                                                                                                         , style { height     : "100%"
+                                                                                                                                                 , width      : "15%"
+                                                                                                                                                 , marginLeft : "10%"
+                                                                                                                                                 , display    : "inline"
+                                                                                                                                                 , float      : "left"
+                                                                                                                                                 , position   : "relative" } ] [ Pux.img [ src $ metronomeButtonPressed state.metronomeButtonPressed
+                                                                                                                                                                                         , style { maxHeight : "100%"
+                                                                                                                                                                                                 , maxWidth  : "100%" 
+                                                                                                                                                                                                 } ] [] ]
+                                                                                                                               , Pux.div [ id_ "Loop_button"
+                                                                                                                                         , onClick $ const MuteButtonPressed
+                                                                                                                                         , style { height     : "100%"
+                                                                                                                                                 , width      : "15%"
+                                                                                                                                                 , marginLeft : "10%"
+                                                                                                                                                 , display    : "inline"
+                                                                                                                                                 , float      : "left"
+                                                                                                                                                 , position   : "relative" } ] [ Pux.img [ src "loop.png"
+                                                                                                                                                                                         , style { maxHeight : "100%"
+                                                                                                                                                                                                 , maxWidth  : "100%" 
+                                                                                                                                                                                                 } ] [] ]
+                                                                                                                               , Pux.div [ id_ "Note_button"
+                                                                                                                                         , onClick $ const MuteButtonPressed
+                                                                                                                                         , style { height     : "100%"
+                                                                                                                                                 , width      : "15%"
+                                                                                                                                                 , marginLeft : "10%"
+                                                                                                                                                 , display    : "inline"
+                                                                                                                                                 , float      : "left"
+                                                                                                                                                 , position   : "relative" } ] [ Pux.img [ src "note.png"
+                                                                                                                                                                                         , style { maxHeight : "100%"
+                                                                                                                                                                                                 , maxWidth  : "100%" 
+                                                                                                                                                                                                 } ] [] ]] ]
                              , Pux.div [ id_ "metronomeWindow"
-                                       , style { height     : resizeMetronomeWindow state.metronomeButtonPressed
+                                       , style { height     : resizeWindow state.metronomeButtonPressed
                                                , width      : "100%"
                                                , position   : "absolute"
                                                , left       : "0%"
                                                , background : "#DDDDDD"
-                                               , border     : "2px solid #ddd"
-                                               , bottom     : "21%"
-                                               , overflow   : "scroll" }] [Pux.Html.Elements.label [] [ Pux.div [style { height      : "100%"
-                                                                                                                       , width       : "100%" }] [text "tempo: 120bpm"]
+                                               -- , border     : "2px solid #ddd"
+                                               , top        : "11%"
+                                               , overflow   : "scroll" }] [Pux.Html.Elements.label [] [ Pux.div [] [text "tempo: 120bpm"]
                                                                                                       , Pux.Html.Elements.input [ type_ "range"
                                                                                                                                 , id_ "tempo"
                                                                                                                                 , Pux.Html.Attributes.min "0"
@@ -159,6 +217,15 @@ view state  = do
                                                                                                       ]
                                                                           , Pux.Html.Elements.script [] [text  "<script>function (){var bpm;sliderTempo = createSlider({slider: document.getElementById('tempo'),min: 10,max: 600,step: 1,message: 'tempo: {value}bpm',onMouseMove: handle,onMouseDown: handle,onMouseUp: process,onMouseMove: handle,onMouseDown: handle,onMouseUp: process});sliderTempo.setValue(120);sliderTempo.setLabel(120);function handle(value){bpm = value;console.log(bpm);sliderTempo.setLabel(value);}function process(){song.setTempo(bpm);}};</script>"]
                                                                           ]
+                             , Pux.div [ id_ "loopWindow"
+                                       , style { height     : resizeWindow state.loopButtonPressed
+                                               , width      : "100%"
+                                               , position   : "absolute"
+                                               , left       : "0%"
+                                               , background : "#DDDDDD"
+                                                 -- , border     : "2px solid #ddd"
+                                               , top        : "11%"
+                                               , overflow   : "scroll" }] [] 
                                
                              
 
@@ -239,25 +306,14 @@ buttons state = [ Pux.div [ id_ "Play_button"
                                                                     , style { maxHeight : "100%"
                                                                             , maxWidth  : "100%" 
                                                                             } ] [] ]
-          , Pux.div [ id_ "Metronome"
-                    , onClick $ const MetronomeButtonPressed
+          , Pux.div [ id_ "Stop_button"
+                    , onClick $ const StopButtonPressed
                     , style { height     : "100%"
                             , width      : "15%"
                             , marginLeft : "10%"
                             , display    : "inline"
                             , float      : "left"
-                            , position   : "relative" } ] [ Pux.img [ src $ metronomeButtonPressed state.metronomeButtonPressed
-                                                                    , style { maxHeight : "100%"
-                                                                            , maxWidth  : "100%" 
-                                                                            } ] [] ]
-          , Pux.div [ id_ "Loop_button"
-                    , onClick $ const MuteButtonPressed
-                    , style { height     : "100%"
-                            , width      : "15%"
-                            , marginLeft : "10%"
-                            , display    : "inline"
-                            , float      : "left"
-                            , position   : "relative" } ] [ Pux.img [ src "loop.png"
+                            , position   : "relative" } ] [ Pux.img [ src "stop.png"
                                                                     , style { maxHeight : "100%"
                                                                             , maxWidth  : "100%" 
                                                                             } ] [] ]
@@ -268,10 +324,10 @@ metronomeButtonPressed b = if b then
                            else
                              "metronome.png"
 
-resizeMetronomeWindow b = if b then
-                            "5%"
-                          else
-                            "0"
+resizeWindow b = if b then
+                   "5%"
+                 else
+                   "0"
 
 
 noteHelperSize :: Boolean -> String

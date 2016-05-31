@@ -45,11 +45,11 @@ type MidiNote = Int
 -- Entry point for the browser.
 -- main :: forall e. State -> Eff (heartbeat :: HEARTBEAT, console :: CONSOLE, dom :: DOM, channel :: CHANNEL, err :: EXCEPTION, vexFlow :: VEXFLOW, midi :: MidiPlayer.MIDI, canvas :: ClearCanvas.CANVAS | e) (App State Action)
 main state = do
-
+  
   MidiPlayer.loadFile midiFile
   MidiPlayer.loadPlugin { soundfontUrl : "midi/examples/soundfont/"
                         , instrument   : "acoustic_grand_piano" }
-    (logger "hoi")
+    (const $ logger "hoi")
     
   urlSignal <- sampleUrl
   let routeSignal :: Signal Action
@@ -85,17 +85,18 @@ main state = do
 
   renderToDOM "#app" app.html
 
-
   runSignal (app.state ~> \state -> drawNoteHelper state.ui.currentPlayBackNote state.ui.currentMidiKeyboardInput )
+  loadHeartBeat midiFile (send playBackChannel) (send userChannel)
   runSignal (app.state ~> \state -> draw state.ui.currentPlayBackNoteIndex)
 
-  loadHeartBeat midiFile (send playBackChannel) (send userChannel)
+
   
   return app
 
 draw n = do
   canvas <- createCanvas "notationCanvas"
-  timeout 500 (MidiPlayer.getData >>= (renderMidi canvas n))
+  midiData <- MidiPlayer.getData
+  renderMidi canvas n midiData
   return unit
 
 
@@ -152,3 +153,6 @@ setCurrentPlayBackNote n = Child (UI.SetPlayBackNote n)
 
 setUserMelody :: App.Layout.Action
 setUserMelody = Child (UI.SetUserMelody)
+
+setMidiData :: (Array Foreign) -> App.Layout.Action
+setMidiData f = Child (UI.SetMidiData f) 
