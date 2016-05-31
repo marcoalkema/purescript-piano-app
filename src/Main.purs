@@ -58,15 +58,15 @@ main state = do
   playBackChannel <- playBackNoteSignal
   let trackSubscription :: Signal MidiNote
       trackSubscription       = subscribe playBackChannel
-      incrementPlayBackSignal = trackSubscription ~> \midiNote -> incrementPlayIndex midiNote
-      playBackSignal          = trackSubscription ~> \midiNote -> setCurrentPlayBackNote midiNote
-  runSignal (trackSubscription ~> \x -> MidiPlayer.logger x)
+      incrementPlayBackSignal = trackSubscription ~> incrementPlayIndex 
+      playBackSignal          = trackSubscription ~> setCurrentPlayBackNote
+  runSignal (trackSubscription ~> MidiPlayer.logger)
   -- runSignal (trackSubscription ~> \midiNote -> playNote midiNote sequencer)
 
   userChannel <- userNoteSignal
   let userInputSubscription :: Signal MidiNote
       userInputSubscription = subscribe userChannel
-      userInputSignal       = userInputSubscription ~> \midiNote -> setCurrentKeyBoardInput midiNote
+      userInputSignal       = userInputSubscription ~> setCurrentKeyBoardInput 
       triggerSignal         = userInputSubscription ~> \midiNote -> setUserMelody
   runSignal (userInputSubscription ~> \midiNote -> MidiPlayer.logger midiNote)
 
