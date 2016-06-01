@@ -46,6 +46,7 @@ type State = { currentMidiKeyboardInput :: MidiNote
              , playButtonPressed        :: Boolean
              , pauseButtonPressed       :: Boolean
              , stopButtonPressed        :: Boolean
+             , recordButtonPressed      :: Boolean
              , metronomeButtonPressed   :: Boolean
              , loopButtonPressed        :: Boolean }
 
@@ -59,28 +60,29 @@ update IncrementPlayBackIndex state   = state { currentPlayBackNoteIndex = state
 update SetUserMelody state            = setMelody state
 update ResetMelody state              = state { userMelody = state.userMelody }
 
-update PlayButtonPressed state      = state { playButtonPressed        = not state.playButtonPressed  }
-update StopButtonPressed state      = state { stopButtonPressed        = not state.playButtonPressed
-                                            , currentPlayBackNoteIndex = -1 }
-update PauseButtonPressed state     = state { pauseButtonPressed       = not state.pauseButtonPressed }
-update LoopButtonPressed state      = state { metronomeButtonPressed   = not state.metronomeButtonPressed  }
-update MuteButtonPressed state      = state { loopButtonPressed        = not state.loopButtonPressed  }
-update MetronomeButtonPressed state = state { metronomeButtonPressed   = not state.metronomeButtonPressed  }
+update PlayButtonPressed state        = state { playButtonPressed        = not state.playButtonPressed  }
+update StopButtonPressed state        = state { stopButtonPressed        = not state.playButtonPressed
+                                              , currentPlayBackNoteIndex = -1 }
+update PauseButtonPressed state       = state { pauseButtonPressed       = not state.pauseButtonPressed }
+update LoopButtonPressed state        = state { metronomeButtonPressed   = not state.metronomeButtonPressed  }
+update RecordButtonPressed state      = state { recordButtonPressed      = not state.recordButtonPressed
+                                              , currentPlayBackNoteIndex = -1 }
+update MetronomeButtonPressed state   = state { metronomeButtonPressed   = not state.metronomeButtonPressed  }
 
-update NoteHelperResize state       = state { noteHelperActivated      = not state.noteHelperActivated }
+update NoteHelperResize state         = state { noteHelperActivated      = not state.noteHelperActivated }
 
-update (SetMidiData d) state       = state { midiData      = d }
+update (SetMidiData d) state          = state { midiData = d }
 
 
 init :: State
-init = { currentMidiKeyboardInput : 48
-       , currentUIPianoSelection  : 48
+init = { currentMidiKeyboardInput : 60
+       , currentUIPianoSelection  : 0
        , currentPlayBackNote      : fromJust $ Data.Array.head NoteHelper.melody
        , currentPlayBackNoteIndex : -1
 
-       , currentPlayBackMelody    : NoteHelper.melody
-       , userMelody               : NoteHelper.melody
-       , currentUserMelodyHead    : fromJust $ Data.Array.head NoteHelper.melody
+       , currentPlayBackMelody    : []
+       , userMelody               : []
+       , currentUserMelodyHead    : fromMaybe 0 $ Data.Array.head NoteHelper.melody
 
        , midiData                 : []
          
@@ -92,23 +94,8 @@ init = { currentMidiKeyboardInput : 48
        , loopButtonPressed        : false }
 
 setMelody :: State -> State
-setMelody state = { currentMidiKeyboardInput : state.currentMidiKeyboardInput
-                  , currentUIPianoSelection  : state.currentUIPianoSelection
-                  , currentPlayBackNote      : state.currentPlayBackNote
-                  , currentPlayBackNoteIndex : state.currentPlayBackNoteIndex
-
-                  , currentPlayBackMelody    : state.currentPlayBackMelody
-                  , userMelody               : newMelody 
-                  , currentUserMelodyHead    : fromJust $ Data.Array.head newMelody
-
-                  , midiData                 : state.midiData
-                    
-                  , noteHelperActivated      : state.noteHelperActivated
-                  , playButtonPressed        : state.playButtonPressed
-                  , pauseButtonPressed       : state.pauseButtonPressed
-                  , stopButtonPressed        : state.stopButtonPressed
-                  , metronomeButtonPressed   : state.metronomeButtonPressed
-                  , loopButtonPressed        : state.loopButtonPressed }
+setMelody state = state { userMelody            = newMelody 
+                        , currentUserMelodyHead = fromMaybe 0 $ Data.Array.head newMelody }
   where
     newMelody = matchUserInput state.currentMidiKeyboardInput state.userMelody
 

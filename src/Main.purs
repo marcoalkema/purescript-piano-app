@@ -49,7 +49,7 @@ main state = do
   MidiPlayer.loadFile midiFile
   MidiPlayer.loadPlugin { soundfontUrl : "midi/examples/soundfont/"
                         , instrument   : "acoustic_grand_piano" }
-    (const $ logger "hoi")
+    (const $ logger "foo")
     
   urlSignal <- sampleUrl
   let routeSignal :: Signal Action
@@ -69,11 +69,6 @@ main state = do
       userInputSignal       = userInputSubscription ~> setCurrentKeyBoardInput 
       triggerSignal         = userInputSubscription ~> \midiNote -> setUserMelody
   runSignal (userInputSubscription ~> \midiNote -> MidiPlayer.logger midiNote)
-
-  -- midiChannel <- midiDataSignal
-  -- let midiDataSubscription :: Signal (Array Foreign)
-  --     midiDataSubscription = subscribe midiChannel
-  --     midiDataSignal       = midiDataSubscription ~> \dat -> logger dat
   
   app <- start
     { initialState: state
@@ -115,8 +110,6 @@ userNoteSignal = do
  -- (Channel MidiNote)
 midiDataSignal  = do
   chan <- channel []
-  let mail = send chan
-  -- MidiPlayer.loadFile2 midiFile (MidiPlayer.getData2 send)
   return chan
 
 midiFile = "colorTest4.mid"
