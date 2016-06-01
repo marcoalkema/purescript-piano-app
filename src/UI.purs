@@ -19,6 +19,8 @@ import Data.Maybe
 import VexFlow
 import MidiToVexFlow
 import Data.Foreign
+import ColorNotation
+import VexMusic
 
 data Action = PlayButtonPressed | PauseButtonPressed | StopButtonPressed | LoopButtonPressed | RecordButtonPressed | MetronomeButtonPressed | NoteHelperResize | IncrementPlayBackIndex | SetUserMelody | ResetMelody | SetMidiKeyBoardInput MidiNote | PianoKeyPressed Note Octave | SetPlayBackNote MidiNote | SetMidiData (Array MidiNote) | SetMidiEvent (Array Foreign) | SetTicks Number | ResetPlayback
 
@@ -31,7 +33,7 @@ type CurrentUserNote     = MidiNote
 
 
 -- TODO: Separate states for ddifferent domains --> Create new / domain-specific states!!!
--- Replace some MidiNotes for Array MidiNote
+--SEPARATION OF CONCERNS!!!
 type State = { currentMidiKeyboardInput :: MidiNote
              , currentUIPianoSelection  :: MidiNote
              , currentPlayBackNote      :: MidiNote
@@ -44,6 +46,7 @@ type State = { currentMidiKeyboardInput :: MidiNote
              , midiData                 :: Array MidiNote
              , ticks                    :: Number
              , midiEvents               :: VexFlowResult
+             , colorNotation            :: NotationHasColor
                
              , noteHelperActivated      :: Boolean
              , playButtonPressed        :: Boolean
@@ -74,15 +77,23 @@ update MetronomeButtonPressed state   = state { metronomeButtonPressed   = not s
 
 update NoteHelperResize state         = state { noteHelperActivated      = not state.noteHelperActivated }
 
-update (SetMidiData d) state          = state { midiData = d }
+update (SetMidiData d) state          = state { midiData      = d }
 update (SetTicks d) state             = state { ticks = d }
 update (SetMidiEvent d) state         = if null d then
-                                          state { midiEvents = initEvent }
+                                          state { midiEvents    = initEvent
+                                                , colorNotation = [[[]]] }
                                         else
-                                          state { midiEvents = renderMidiPure d state.ticks }
+                                          state { midiEvents    = midi
+                                                , colorNotation = setInitColor midi.vexFlowNotes}
+  where
+    midi = renderMidiPure d state.ticks
 update ResetPlayback state            = state { currentPlayBackNoteIndex = -1 }
 
-
+--Lenses
+setInitColor :: VexFlowMusic -> NotationHasColor
+setInitColor =  mapVoices $ const false
+  where
+    mapVoices = map <<< map <<< map
 
 init :: State
 init = { currentMidiKeyboardInput : 60
@@ -97,6 +108,7 @@ init = { currentMidiKeyboardInput : 60
        , midiData                 : []
        , ticks                    : 480.0
        , midiEvents               : initEvent
+       , colorNotation            : [[[]]]
          
        , noteHelperActivated      : false
        , playButtonPressed        : false

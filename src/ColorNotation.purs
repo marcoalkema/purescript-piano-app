@@ -45,24 +45,3 @@ compareToIndex i n bar = if n < (i - currentArrayLength) then
     setElementToTrue i v  = updateAt i true v
     setToTrue             :: BarHasColor
     setToTrue             = map (\voice -> fromMaybe (Data.Array.concat bar) (setElementToTrue currentArrayIndex voice)) bar
-
-countNotes = foldl (\b n -> b + 1) 0
-
-addLengths = foldl (\b n -> b + n) 0 $
-             map (foldl (\b l -> b + (countNotes l)) 0) foo
-
-foo :: NotationHasColor
-foo =
-  [
-    [[false, false, false, false]]
-  , [[false, false, false]]
-  , [[false, false, false, false]]
-  , [[false, false]]
-  , [[false, false, false, false]]
-  , [[false, false, false, false, false, false, false, false]]
-  , [[false, false, false, false, false, false, false, false]]
-  , [[false, false, false, false]]
-  ]
-
-foo2 :: NotationHasColor
-foo2 = getHasColorFromRecord $ setBoolean 12 foo

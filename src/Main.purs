@@ -84,21 +84,21 @@ main state = do
     , update:
       fromSimple update
     , view: view
-    , inputs: [fromJust $ mergeMany [routeSignal, playBackSignal, incrementPlayBackSignal, userInputSignal, triggerSignal, processedMidiSignal, midiEventSignal, ticksSignal, endOfTrackSignal ]]
+    , inputs: [fromMaybe routeSignal $ mergeMany [routeSignal, playBackSignal, incrementPlayBackSignal, userInputSignal, triggerSignal, processedMidiSignal, midiEventSignal, ticksSignal, endOfTrackSignal]]
     }
 
   renderToDOM "#app" app.html
 
   runSignal (app.state ~> \state -> drawNoteHelper state.ui.currentPlayBackNote state.ui.currentMidiKeyboardInput )
   loadHeartBeat midiFile (send playBackChannel) (send userChannel) (send endOfTrackChannel)
-  runSignal (app.state ~> \state -> draw state.ui.currentPlayBackNoteIndex state.ui.midiEvents)
+  runSignal (app.state ~> \state -> draw state.ui.currentPlayBackNoteIndex state.ui.midiEvents state.ui. colorNotation)
   
   return app
 
-draw i midi = do
+draw i midi notationHasColor= do
   clearCanvas "notationCanvas"
   canvas <- createCanvas "notationCanvas"
-  renderMidi canvas i midi
+  renderMidi canvas i notationHasColor midi 
   return unit
 
 loadMidi = do
