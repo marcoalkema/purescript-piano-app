@@ -1,41 +1,35 @@
 module Main where
 
 import App.Routes (match)
-import App.Layout (Action(PageView), State, view, update)
+import App.Layout
+import App.UI as UI
+import Control.Monad.Aff
 import Control.Monad.Eff
-import DOM.Timer
 import Control.Monad.Eff.Class 
+import Control.Monad.Eff.Exception
+import Control.Monad.Eff.Console
+import Data.Tuple
+import Data.Foldable
+import Data.Foreign
+import Data.List
+import Data.Function
+import Data.Maybe
+import DOM.Timer
 import DOM (DOM)
--- import Prelude (bind, return, (++), show, not, unit, ($), (<$>), (<<<), map, (<>), (==), pure, (>))
 import Prelude
 import Pux
 import Pux.Router (sampleUrl)
-import Signal ((~>))
+import Pux.Html (Html)
+import Signal
 import Signal.Channel
-import Control.Monad.Eff.Exception
-import Control.Monad.Eff.Console
-import Prelude (Unit, (>>=), const, bind)
-import VexFlow (VEXFLOW, createCanvas)
+import VexFlow
 import MidiPlayer
 import MidiToVexFlow (renderMidi)
 import HeartBeat
-import Data.Foldable
 import NoteHelper
-import VexFlow
-import Signal
 import ClearCanvas
-import Data.List
-import Data.Function
-import App.UI as UI
-import Pux.Html (Html)
-import App.Layout
-import Control.Monad.Aff
-import Data.Maybe
-import Data.Either
 import MidiToVexFlow
 import Quantizer
-import Data.Tuple
-import Data.Foreign
 import ColorNotation
 
 type AppEffects = (dom :: DOM)
