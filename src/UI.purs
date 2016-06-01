@@ -20,7 +20,7 @@ import VexFlow
 import MidiToVexFlow
 import Data.Foreign
 
-data Action = PlayButtonPressed | PauseButtonPressed | StopButtonPressed | LoopButtonPressed | RecordButtonPressed | MetronomeButtonPressed | NoteHelperResize | IncrementPlayBackIndex | SetUserMelody | ResetMelody | SetMidiKeyBoardInput MidiNote | PianoKeyPressed Note Octave | SetPlayBackNote MidiNote | SetMidiData (Array MidiNote) | SetMidiEvent (Array Foreign) | SetTicks Number
+data Action = PlayButtonPressed | PauseButtonPressed | StopButtonPressed | LoopButtonPressed | RecordButtonPressed | MetronomeButtonPressed | NoteHelperResize | IncrementPlayBackIndex | SetUserMelody | ResetMelody | SetMidiKeyBoardInput MidiNote | PianoKeyPressed Note Octave | SetPlayBackNote MidiNote | SetMidiData (Array MidiNote) | SetMidiEvent (Array Foreign) | SetTicks Number | ResetPlayback
 
 data Note = NoteC | NoteCis | NoteD | NoteDis | NoteE | NoteF | NoteFis | NoteG | NoteGis | NoteA | NoteAis | NoteB
 
@@ -80,6 +80,7 @@ update (SetMidiEvent d) state         = if null d then
                                           state { midiEvents = initEvent }
                                         else
                                           state { midiEvents = renderMidiPure d state.ticks }
+update ResetPlayback state            = state { currentPlayBackNoteIndex = -1 }
 
 
 
@@ -105,6 +106,8 @@ init = { currentMidiKeyboardInput : 60
        , metronomeButtonPressed   : false
        , loopButtonPressed        : false }
 
+
+-- TODO: FIX: initEvent gives runtime error in JS.
 initEvent = { vexFlowNotes : [[[{ pitch    : ["c/4"]
                               , duration :  "1"    }]]]
           , vexNotes     : [[[]]]

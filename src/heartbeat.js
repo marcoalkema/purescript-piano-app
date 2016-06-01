@@ -7,6 +7,7 @@ module.exports = {
     loadHeartBeat : function(file){
 	return function(send1){
 	    return function(send2){
+		return function(send3){
 		return function(){
 
 		    var btnPlay = document.getElementById('Play_button');
@@ -32,10 +33,14 @@ module.exports = {
 			    song.addEventListener('event', 'type = NOTE_ON', function(midiEvent){
 				send1(midiEvent.data1)();
 			    });
+			    
+			    song.addEventListener('end', function(midiEvent){
+				console.log("EINDE");
+				send3(true)();
+			    });
 
 			    //Handler for MIDI keyboard
 			    song.addMidiEventListener('note on', function(midi){
-				console.log('Type: note_on: ' + midi.data1);
 				var midiNote = midi.data1;
 				var events = sequencer.util.getRandomNotes({
 				    minNoteNumber: midiNote + 12,
@@ -142,6 +147,7 @@ module.exports = {
 
 			});
 		    });
+		};
 		};
 		
 	    };

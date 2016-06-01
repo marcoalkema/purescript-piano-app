@@ -52,7 +52,7 @@ main state = do
       ticksSignal :: Signal Action
       ticksSignal = ticksSubscription ~> setTicks
       processedMidiSignal  :: Signal Action
-      processedMidiSignal  = midiDataSubscription ~> \x -> setMidiData <<< getMidiNotes $  (processMidi x).midiNotes
+      processedMidiSignal  = midiDataSubscription ~> \x -> setMidiData <<< getMidiNotes $ (processMidi x).midiNotes
       midiEventSignal  :: Signal Action
       midiEventSignal  = midiDataSubscription ~> setMidiEvent
 
@@ -73,19 +73,24 @@ main state = do
       userInputSignal       = userInputSubscription ~> setCurrentKeyBoardInput 
       triggerSignal         = userInputSubscription ~> \midiNote -> setUserMelody
   runSignal (userInputSubscription ~> \midiNote -> MidiPlayer.logger midiNote)
+
+  endOfTrackChannel <- endOfTrackSignal
+  let endOfTrackSubscription = subscribe endOfTrackChannel
+      endOfTrackSignal :: Signal Action
+      endOfTrackSignal = endOfTrackSubscription ~> resetPlayback
   
   app <- start
     { initialState: state
     , update:
       fromSimple update
     , view: view
-    , inputs: [fromJust $ mergeMany [routeSignal, playBackSignal, incrementPlayBackSignal, userInputSignal, triggerSignal, processedMidiSignal, midiEventSignal, ticksSignal ]]
+    , inputs: [fromJust $ mergeMany [routeSignal, playBackSignal, incrementPlayBackSignal, userInputSignal, triggerSignal, processedMidiSignal, midiEventSignal, ticksSignal, endOfTrackSignal ]]
     }
 
   renderToDOM "#app" app.html
 
   runSignal (app.state ~> \state -> drawNoteHelper state.ui.currentPlayBackNote state.ui.currentMidiKeyboardInput )
-  loadHeartBeat midiFile (send playBackChannel) (send userChannel)
+  loadHeartBeat midiFile (send playBackChannel) (send userChannel) (send endOfTrackChannel)
   runSignal (app.state ~> \state -> draw state.ui.currentPlayBackNoteIndex state.ui.midiEvents)
   
   return app
@@ -119,6 +124,10 @@ loadMidi = do
 playBackNoteSignal = do 
   chan <- channel 0
   let mail = send chan
+  return chan
+
+endOfTrackSignal = do 
+  chan <- channel false
   return chan
 
 -- userNoteSignal :: forall e. Eff (heartbeat :: HEARTBEAT, channel :: CHANNEL | e) (Channel MidiNote)
@@ -179,3 +188,6 @@ setTicks n = Child (UI.SetTicks n)
 
 setMidiEvent :: Array Foreign -> App.Layout.Action
 setMidiEvent m = Child (UI.SetMidiEvent m)
+
+resetPlayback :: Boolean -> App.Layout.Action
+resetPlayback b = Child (UI.ResetPlayback)
