@@ -61,21 +61,21 @@ main state = do
   let routeSignal :: Signal Action
       routeSignal = urlSignal ~> \r -> PageView (match r)
 
-  playBackChannel <- playBackNoteSignal
+  playBackChannel <- channel 0
   let trackSubscription :: Signal MidiNote
       trackSubscription       = subscribe playBackChannel
       incrementPlayBackSignal = trackSubscription ~> incrementPlayIndex 
       playBackSignal          = trackSubscription ~> setCurrentPlayBackNote
   runSignal (trackSubscription ~> MidiPlayer.logger)
 
-  userChannel <- userNoteSignal
+  userChannel <- channel 0
   let userInputSubscription :: Signal MidiNote
       userInputSubscription = subscribe userChannel
       userInputSignal       = userInputSubscription ~> setCurrentKeyBoardInput 
       triggerSignal         = userInputSubscription ~> \midiNote -> setUserMelody
   runSignal (userInputSubscription ~> MidiPlayer.logger)
 
-  endOfTrackChannel <- endOfTrackSignal
+  endOfTrackChannel <- channel false
   let endOfTrackSubscription = subscribe endOfTrackChannel
       endOfTrackSignal :: Signal Action
       endOfTrackSignal = endOfTrackSubscription ~> resetPlayback
@@ -113,19 +113,6 @@ loadMidi = do
     , instrument   : "acoustic_grand_piano" }
     (const $ MidiPlayer.getData2 (send midiDataChannel) (send ticksChannel))
   return { midi: midiDataChannel, ticks: ticksChannel }
-
--- playBackNoteSignal :: forall e. Eff (channel :: CHANNEL | e) (Channel MidiNote)
-playBackNoteSignal = channel 0
-
--- endOfTrackSignal :: forall e. Eff _ (Channel _)
-endOfTrackSignal = channel false
-
--- userNoteSignal :: forall e. Eff (channel :: CHANNEL | e) (Channel MidiNote)
-userNoteSignal = channel 0
-
--- TODO use alias instead of Foreign
-midiDataSignal :: forall e. Eff (midi :: MidiPlayer.MIDI, channel :: CHANNEL | e) (Channel (Array Foreign))
-midiDataSignal = channel []
 
 midiFile = "colorTest4.mid"
 
