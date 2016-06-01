@@ -17,9 +17,10 @@ import MidiPlayer
 import NoteHelper
 import Data.Maybe
 import VexFlow
+import MidiToVexFlow
 import Data.Foreign
 
-data Action = PlayButtonPressed | PauseButtonPressed | StopButtonPressed | LoopButtonPressed | MuteButtonPressed | MetronomeButtonPressed | NoteHelperResize | IncrementPlayBackIndex | SetUserMelody | ResetMelody | SetMidiKeyBoardInput MidiNote | PianoKeyPressed Note Octave | SetPlayBackNote MidiNote | SetMidiData (Array Foreign)
+data Action = PlayButtonPressed | PauseButtonPressed | StopButtonPressed | LoopButtonPressed | RecordButtonPressed | MetronomeButtonPressed | NoteHelperResize | IncrementPlayBackIndex | SetUserMelody | ResetMelody | SetMidiKeyBoardInput MidiNote | PianoKeyPressed Note Octave | SetPlayBackNote MidiNote | SetMidiData (Array MidiNote) | SetMidiEvent (Array Foreign) | SetTicks Number
 
 data Note = NoteC | NoteCis | NoteD | NoteDis | NoteE | NoteF | NoteFis | NoteG | NoteGis | NoteA | NoteAis | NoteB
 
@@ -40,7 +41,9 @@ type State = { currentMidiKeyboardInput :: MidiNote
              , userMelody               :: Array MidiNote
              , currentUserMelodyHead    :: MidiNote
 
-             , midiData                 :: Array Foreign
+             , midiData                 :: Array MidiNote
+             , ticks                    :: Number
+             , midiEvents               :: VexFlowResult
                
              , noteHelperActivated      :: Boolean
              , playButtonPressed        :: Boolean
@@ -72,12 +75,18 @@ update MetronomeButtonPressed state   = state { metronomeButtonPressed   = not s
 update NoteHelperResize state         = state { noteHelperActivated      = not state.noteHelperActivated }
 
 update (SetMidiData d) state          = state { midiData = d }
+update (SetTicks d) state             = state { ticks = d }
+update (SetMidiEvent d) state         = if null d then
+                                          state { midiEvents = vlaVlip }
+                                        else
+                                          state { midiEvents = renderMidiPure d state.ticks }
+
 
 
 init :: State
 init = { currentMidiKeyboardInput : 60
        , currentUIPianoSelection  : 0
-       , currentPlayBackNote      : fromJust $ Data.Array.head NoteHelper.melody
+       , currentPlayBackNote      : fromMaybe 0 $ Data.Array.head NoteHelper.melody
        , currentPlayBackNoteIndex : -1
 
        , currentPlayBackMelody    : []
@@ -85,14 +94,24 @@ init = { currentMidiKeyboardInput : 60
        , currentUserMelodyHead    : fromMaybe 0 $ Data.Array.head NoteHelper.melody
 
        , midiData                 : []
+       , ticks                    : 480.0
+       , midiEvents               : initEvent
          
-       , noteHelperActivated      : true
+       , noteHelperActivated      : false
        , playButtonPressed        : false
        , pauseButtonPressed       : false
-       , stopButtonPressed       : false
+       , stopButtonPressed        : false
+       , recordButtonPressed      : false
        , metronomeButtonPressed   : false
        , loopButtonPressed        : false }
 
+initEvent = { vexFlowNotes : [[[{ pitch    : ["c/4"]
+                              , duration :  "1"    }]]]
+          , vexNotes     : [[[]]]
+          , indexedTies  : [[]]
+          , indexedBeams : [[[]]]
+          , numerator    : 1 }
+          
 setMelody :: State -> State
 setMelody state = state { userMelody            = newMelody 
                         , currentUserMelodyHead = fromMaybe 0 $ Data.Array.head newMelody }
@@ -163,7 +182,7 @@ view state  = do
                                                                                                                                                                                                  , maxWidth  : "100%" 
                                                                                                                                                                                                  } ] [] ]
                                                                                                                                , Pux.div [ id_ "Loop_button"
-                                                                                                                                         , onClick $ const MuteButtonPressed
+                                                                                                                                         , onClick $ const LoopButtonPressed
                                                                                                                                          , style { height     : "100%"
                                                                                                                                                  , width      : "15%"
                                                                                                                                                  , marginLeft : "10%"
@@ -174,7 +193,7 @@ view state  = do
                                                                                                                                                                                                  , maxWidth  : "100%" 
                                                                                                                                                                                                  } ] [] ]
                                                                                                                                , Pux.div [ id_ "Note_button"
-                                                                                                                                         , onClick $ const MuteButtonPressed
+                                                                                                                                         , onClick $ const LoopButtonPressed
                                                                                                                                          , style { height     : "100%"
                                                                                                                                                  , width      : "15%"
                                                                                                                                                  , marginLeft : "10%"
@@ -243,7 +262,8 @@ view state  = do
                                                -- , fontSize   : "33"  
                                                , width      : "100%"
                                                , background : "#F4F4F4"
-                                               } ] [ text $ "Currently selected note : " ++ show state.userMelody
+                                               } ] [ text $ "Currently selected note : " ++ show state.midiData
+                                                   , text $ "        " ++ show state.ticks
                                                    , text $ "        " ++ show state.currentUserMelodyHead
                                                    , text $ "        " ++ show state.currentMidiKeyboardInput
                                                    , text $ "        " ++ show state.currentUIPianoSelection
