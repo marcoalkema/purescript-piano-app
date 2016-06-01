@@ -45,46 +45,42 @@ type MidiNote = Int
 -- main :: forall e. State -> Eff (heartbeat :: HEARTBEAT, console :: CONSOLE, dom :: DOM, channel :: CHANNEL, err :: EXCEPTION, vexFlow :: VEXFLOW, midi :: MidiPlayer.MIDI, canvas :: ClearCanvas.CANVAS | e) (App State Action)
 main state = do
   midiDataChannels <- loadMidi
-  -- TODO these things you call `subscription` are signals
-  let midiDataSubscription :: Signal (Array Foreign)
-      midiDataSubscription = subscribe midiDataChannels.midi
-      ticksSubscription :: Signal Number
-      ticksSubscription = subscribe midiDataChannels.ticks
+  let midiDataSignal :: Signal (Array Foreign)
+      midiDataSignal = subscribe midiDataChannels.midi
       ticksSignal :: Signal Action
-      ticksSignal = ticksSubscription ~> setTicks
+      ticksSignal = subscribe midiDataChannels.ticks ~> setTicks
       processedMidiSignal :: Signal Action
-      processedMidiSignal = midiDataSubscription ~> setMidiData <<< getMidiNotes <<< (_.midiNotes) <<< processMidi
+      processedMidiSignal = midiDataSignal ~> setMidiData <<< getMidiNotes <<< (_.midiNotes) <<< processMidi
       midiEventSignal :: Signal Action
-      midiEventSignal = midiDataSubscription ~> setMidiEvent
+      midiEventSignal = midiDataSignal ~> setMidiEvent
 
   urlSignal <- sampleUrl
   let routeSignal :: Signal Action
       routeSignal = urlSignal ~> \r -> PageView (match r)
 
   playBackChannel <- channel 0
-  let trackSubscription :: Signal MidiNote
-      trackSubscription       = subscribe playBackChannel
-      incrementPlayBackSignal = trackSubscription ~> incrementPlayIndex 
-      playBackSignal          = trackSubscription ~> setCurrentPlayBackNote
-  runSignal (trackSubscription ~> MidiPlayer.logger)
+  let trackSignal :: Signal MidiNote
+      trackSignal = subscribe playBackChannel
+      incrementPlayBackSignal = trackSignal ~> incrementPlayIndex
+      playBackSignal          = trackSignal ~> setCurrentPlayBackNote
+  runSignal (trackSignal ~> MidiPlayer.logger)
 
   userChannel <- channel 0
-  let userInputSubscription :: Signal MidiNote
-      userInputSubscription = subscribe userChannel
-      userInputSignal       = userInputSubscription ~> setCurrentKeyBoardInput 
-      triggerSignal         = userInputSubscription ~> \midiNote -> setUserMelody
-  runSignal (userInputSubscription ~> MidiPlayer.logger)
+  let userInputSignal       :: Signal MidiNote
+      userInputSignal       = subscribe userChannel
+      keyboardInputSignal   = userInputSignal ~> setCurrentKeyBoardInput
+      triggerSignal         = userInputSignal ~> \midiNote -> setUserMelody
+  runSignal (userInputSignal ~> MidiPlayer.logger)
 
   endOfTrackChannel <- channel false
-  let endOfTrackSubscription = subscribe endOfTrackChannel
-      endOfTrackSignal :: Signal Action
-      endOfTrackSignal = endOfTrackSubscription ~> resetPlayback
+  let endOfTrackSignal :: Signal Action
+      endOfTrackSignal = subscribe endOfTrackChannel ~> resetPlayback
   
   app <- start
     { initialState: state
     , update: fromSimple update
     , view: view
-    , inputs: [fromMaybe routeSignal $ mergeMany [routeSignal, playBackSignal, incrementPlayBackSignal, userInputSignal, triggerSignal, processedMidiSignal, midiEventSignal, ticksSignal, endOfTrackSignal]]
+    , inputs: [fromMaybe routeSignal $ mergeMany [routeSignal, playBackSignal, incrementPlayBackSignal, keyboardInputSignal, triggerSignal, processedMidiSignal, midiEventSignal, ticksSignal, endOfTrackSignal]]
     }
 
   renderToDOM "#app" app.html
