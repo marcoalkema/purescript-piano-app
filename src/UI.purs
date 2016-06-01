@@ -77,7 +77,7 @@ update NoteHelperResize state         = state { noteHelperActivated      = not s
 update (SetMidiData d) state          = state { midiData = d }
 update (SetTicks d) state             = state { ticks = d }
 update (SetMidiEvent d) state         = if null d then
-                                          state { midiEvents = vlaVlip }
+                                          state { midiEvents = initEvent }
                                         else
                                           state { midiEvents = renderMidiPure d state.ticks }
 
