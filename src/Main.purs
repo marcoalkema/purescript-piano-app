@@ -45,16 +45,17 @@ type MidiNote = Int
 -- main :: forall e. State -> Eff (heartbeat :: HEARTBEAT, console :: CONSOLE, dom :: DOM, channel :: CHANNEL, err :: EXCEPTION, vexFlow :: VEXFLOW, midi :: MidiPlayer.MIDI, canvas :: ClearCanvas.CANVAS | e) (App State Action)
 main state = do
   midiDataChannels <- loadMidi
+  -- TODO these things you call `subscription` are signals
   let midiDataSubscription :: Signal (Array Foreign)
       midiDataSubscription = subscribe midiDataChannels.midi
       ticksSubscription :: Signal Number
       ticksSubscription = subscribe midiDataChannels.ticks
       ticksSignal :: Signal Action
       ticksSignal = ticksSubscription ~> setTicks
-      processedMidiSignal  :: Signal Action
-      processedMidiSignal  = midiDataSubscription ~> \x -> setMidiData <<< getMidiNotes $ (processMidi x).midiNotes
-      midiEventSignal  :: Signal Action
-      midiEventSignal  = midiDataSubscription ~> setMidiEvent
+      processedMidiSignal :: Signal Action
+      processedMidiSignal = midiDataSubscription ~> setMidiData <<< getMidiNotes <<< (_.midiNotes) <<< processMidi
+      midiEventSignal :: Signal Action
+      midiEventSignal = midiDataSubscription ~> setMidiEvent
 
   urlSignal <- sampleUrl
   let routeSignal :: Signal Action
@@ -65,14 +66,14 @@ main state = do
       trackSubscription       = subscribe playBackChannel
       incrementPlayBackSignal = trackSubscription ~> incrementPlayIndex 
       playBackSignal          = trackSubscription ~> setCurrentPlayBackNote
-  runSignal (trackSubscription ~> \x -> MidiPlayer.logger x)
+  runSignal (trackSubscription ~> MidiPlayer.logger)
 
   userChannel <- userNoteSignal
   let userInputSubscription :: Signal MidiNote
       userInputSubscription = subscribe userChannel
       userInputSignal       = userInputSubscription ~> setCurrentKeyBoardInput 
       triggerSignal         = userInputSubscription ~> \midiNote -> setUserMelody
-  runSignal (userInputSubscription ~> \midiNote -> MidiPlayer.logger midiNote)
+  runSignal (userInputSubscription ~> MidiPlayer.logger)
 
   endOfTrackChannel <- endOfTrackSignal
   let endOfTrackSubscription = subscribe endOfTrackChannel
@@ -81,66 +82,50 @@ main state = do
   
   app <- start
     { initialState: state
-    , update:
-      fromSimple update
+    , update: fromSimple update
     , view: view
     , inputs: [fromMaybe routeSignal $ mergeMany [routeSignal, playBackSignal, incrementPlayBackSignal, userInputSignal, triggerSignal, processedMidiSignal, midiEventSignal, ticksSignal, endOfTrackSignal]]
     }
 
   renderToDOM "#app" app.html
 
-  runSignal (app.state ~> \state -> drawNoteHelper state.ui.currentPlayBackNote state.ui.currentMidiKeyboardInput )
+  runSignal (app.state ~> \state -> drawNoteHelper state.ui.currentPlayBackNote state.ui.currentMidiKeyboardInput)
   loadHeartBeat midiFile (send playBackChannel) (send userChannel) (send endOfTrackChannel)
   runSignal (app.state ~> \state -> draw state.ui.currentPlayBackNoteIndex state.ui.midiEvents state.ui. colorNotation)
   
   return app
 
+-- TODO create Canvas *once*, and clear repeatedly; clearCanvas should take a Canvas value instead of a String
 draw i midi notationHasColor= do
   clearCanvas "notationCanvas"
   canvas <- createCanvas "notationCanvas"
   renderMidi canvas i notationHasColor midi 
   return unit
 
+-- TODO use a type alias instead of Foreign
+loadMidi :: forall e. Eff (midi :: MIDI, channel :: CHANNEL | e) { midi :: Channel (Array Foreign), ticks :: Channel Number }
 loadMidi = do
-  chan <- channel []
-  let mail = send chan
-  chan2 <- channel 0.0
-  let mail2 = send chan2
-  let midiChannels = { midi  : chan
-                     , ticks : chan2 }
+  midiDataChannel <- channel []
+  ticksChannel <- channel 0.0
   MidiPlayer.loadFile midiFile
-  MidiPlayer.loadPlugin { soundfontUrl : "midi/examples/soundfont/"
-                        , instrument   : "acoustic_grand_piano" }
-    (const $ MidiPlayer.getData2 mail mail2)
-  return midiChannels
+  MidiPlayer.loadPlugin
+    { soundfontUrl : "midi/examples/soundfont/"
+    , instrument   : "acoustic_grand_piano" }
+    (const $ MidiPlayer.getData2 (send midiDataChannel) (send ticksChannel))
+  return { midi: midiDataChannel, ticks: ticksChannel }
 
--- processForeign d = do
---   ticksPerBeat <- getTicksPerBeat
-  
-  
+-- playBackNoteSignal :: forall e. Eff (channel :: CHANNEL | e) (Channel MidiNote)
+playBackNoteSignal = channel 0
 
+-- endOfTrackSignal :: forall e. Eff _ (Channel _)
+endOfTrackSignal = channel false
 
--- playBackNoteSignal :: forall e. Eff (heartbeat :: HEARTBEAT, channel :: CHANNEL | e) (Channel MidiNote)
-playBackNoteSignal = do 
-  chan <- channel 0
-  let mail = send chan
-  return chan
+-- userNoteSignal :: forall e. Eff (channel :: CHANNEL | e) (Channel MidiNote)
+userNoteSignal = channel 0
 
-endOfTrackSignal = do 
-  chan <- channel false
-  return chan
-
--- userNoteSignal :: forall e. Eff (heartbeat :: HEARTBEAT, channel :: CHANNEL | e) (Channel MidiNote)
-userNoteSignal = do 
-  chan <- channel 0
-  let mail = send chan
-  return chan
-
-midiDataSignal :: forall e. Eff (midi :: MidiPlayer.MIDI, channel :: CHANNEL | e)
- (Channel (Array Foreign))
-midiDataSignal = do
-  chan <- channel []
-  return chan
+-- TODO use alias instead of Foreign
+midiDataSignal :: forall e. Eff (midi :: MidiPlayer.MIDI, channel :: CHANNEL | e) (Channel (Array Foreign))
+midiDataSignal = channel []
 
 midiFile = "colorTest4.mid"
 
@@ -153,7 +138,7 @@ drawNoteHelper playBackNote userNote = do
 
 type MidiNotes = { midiNotes :: Array MidiJsTypes.MidiNote }
 
-getMidiNotes xs = map (_.noteNumber) xs
+getMidiNotes = map (_.noteNumber)
 
 processMidi :: Array Foreign -> MidiNotes
 processMidi midiData = do
@@ -169,25 +154,25 @@ processMidi midiData = do
   { midiNotes }
 
 setCurrentKeyBoardInput :: MidiNote -> App.Layout.Action
-setCurrentKeyBoardInput n = Child (UI.SetMidiKeyBoardInput n)
+setCurrentKeyBoardInput = Child <<< UI.SetMidiKeyBoardInput
 
 incrementPlayIndex :: Int -> App.Layout.Action
-incrementPlayIndex n = Child (UI.IncrementPlayBackIndex)
+incrementPlayIndex _ = Child (UI.IncrementPlayBackIndex)
 
 setCurrentPlayBackNote :: MidiNote -> App.Layout.Action
-setCurrentPlayBackNote n = Child (UI.SetPlayBackNote n)
+setCurrentPlayBackNote = Child <<< UI.SetPlayBackNote
 
 setUserMelody :: App.Layout.Action
 setUserMelody = Child (UI.SetUserMelody)
 
 setMidiData :: (Array MidiNote) -> App.Layout.Action
-setMidiData m = Child (UI.SetMidiData m)
+setMidiData = Child <<< UI.SetMidiData
 
 setTicks :: Number -> App.Layout.Action
-setTicks n = Child (UI.SetTicks n)
+setTicks = Child <<< UI.SetTicks
 
 setMidiEvent :: Array Foreign -> App.Layout.Action
-setMidiEvent m = Child (UI.SetMidiEvent m)
+setMidiEvent = Child <<< UI.SetMidiEvent
 
 resetPlayback :: Boolean -> App.Layout.Action
-resetPlayback b = Child (UI.ResetPlayback)
+resetPlayback _ = Child (UI.ResetPlayback)
