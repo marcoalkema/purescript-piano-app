@@ -57,14 +57,12 @@ main state = do
       trackSignal = subscribe playBackChannel
       incrementPlayBackSignal = trackSignal ~> incrementPlayIndex
       playBackSignal          = trackSignal ~> setCurrentPlayBackNote
-  runSignal (trackSignal ~> MidiPlayer.logger)
 
   userChannel <- channel 0
   let userInputSignal       :: Signal MidiNote
       userInputSignal       = subscribe userChannel
       keyboardInputSignal   = userInputSignal ~> setCurrentKeyBoardInput
       triggerSignal         = userInputSignal ~> \midiNote -> setUserMelody
-  runSignal (userInputSignal ~> MidiPlayer.logger)
 
   endOfTrackChannel <- channel false
   let endOfTrackSignal :: Signal Action
@@ -79,12 +77,17 @@ main state = do
 
   renderToDOM "#app" app.html
 
-  runSignal (app.state ~> \state -> drawNoteHelper state.ui.currentPlayBackNote state.ui.currentMidiKeyboardInput)
+  runSignal (app.state ~> \state -> drawNoteHelper (getAppFunctionality state)  state.ui.currentMidiKeyboardInput)
   loadHeartBeat midiFile (send playBackChannel) (send userChannel) (send endOfTrackChannel)
   runSignal (app.state ~> \state -> draw state.ui.currentPlayBackNoteIndex state.ui.midiEvents state.ui.colorNotation)
   
   return app
 
+getAppFunctionality :: State -> Int
+getAppFunctionality s = if s.ui.recordButtonPressed then
+                          s.ui.currentUserMelodyHead
+                        else
+                          s.ui.currentPlayBackNote
 
 -- TODO create Canvas *once*, and clear repeatedly; clearCanvas should take a Canvas value instead of a String
 draw i midi notationHasColor= do

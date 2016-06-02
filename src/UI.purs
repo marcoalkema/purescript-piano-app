@@ -38,10 +38,13 @@ type State = { currentMidiKeyboardInput :: MidiNote
              , currentUIPianoSelection  :: MidiNote
              , currentPlayBackNote      :: MidiNote
              , currentPlayBackNoteIndex :: Int
+
+             , currentSelectedNote      :: MidiNote
                
              , currentPlayBackMelody    :: Array MidiNote
              , userMelody               :: Array MidiNote
              , currentUserMelodyHead    :: MidiNote
+             , currentNoteHelperNote    :: MidiNote
 
              , midiData                 :: Array MidiNote
              , ticks                    :: Number
@@ -59,6 +62,7 @@ type State = { currentMidiKeyboardInput :: MidiNote
 update :: Action -> State -> State
 
 update (SetMidiKeyBoardInput n) state = state { currentMidiKeyboardInput = n
+                                              , currentSelectedNote      = n
                                               , currentPlayBackNoteIndex = if state.recordButtonPressed then
                                                                              incIndex
                                                                            else
@@ -73,7 +77,8 @@ update (SetMidiKeyBoardInput n) state = state { currentMidiKeyboardInput = n
                                               else
                                               state.currentPlayBackNoteIndex
                                               
-update (PianoKeyPressed x y) state    = state { currentUIPianoSelection  = toMidiNote x y }
+update (PianoKeyPressed x y) state    = state { currentUIPianoSelection  = toMidiNote x y
+                                              , currentSelectedNote      = toMidiNote x y }
 update (SetPlayBackNote n) state      = state { currentPlayBackNote      = n }
 update IncrementPlayBackIndex state   = state { currentPlayBackNoteIndex = state.currentPlayBackNoteIndex + 1 }
 
@@ -130,12 +135,14 @@ update ResetPlayback state            = state { currentPlayBackNoteIndex = -1 }
 init :: State
 init = { currentMidiKeyboardInput : 60
        , currentUIPianoSelection  : 0
-       , currentPlayBackNote      : fromMaybe 0 $ Data.Array.head NoteHelper.melody
+       , currentPlayBackNote      : 60
        , currentPlayBackNoteIndex : -1
+       , currentSelectedNote      : 0
 
        , currentPlayBackMelody    : []
        , userMelody               : []
-       , currentUserMelodyHead    : fromMaybe 0 $ Data.Array.head NoteHelper.melody
+       , currentUserMelodyHead    : 0
+       , currentNoteHelperNote    : 60
 
        , midiData                 : []
        , ticks                    : 480.0
@@ -403,7 +410,7 @@ octaves :: Octave -> Array Octave
 octaves n = range 1 (round (max (toNumber 1) (abs $ toNumber n)))
                
 drawOctaves :: State -> Array (Html Action)
-drawOctaves state = map (\x -> drawOctave x state.currentPlayBackNote [state.currentMidiKeyboardInput] state.currentUIPianoSelection) (octaves octaveNumber)
+drawOctaves state = map (\x -> drawOctave x state.currentPlayBackNote [state.currentMidiKeyboardInput] state.currentSelectedNote) (octaves octaveNumber)
                     
 drawOctave :: Octave  -> MidiNote -> Array MidiNote -> MidiNote -> (Html Action)
 drawOctave oct notePlayed userNote selectedNote = Pux.div [] (drawKeys oct notePlayed userNote selectedNote)
