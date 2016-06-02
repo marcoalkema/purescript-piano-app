@@ -81,7 +81,7 @@ main state = do
 
   runSignal (app.state ~> \state -> drawNoteHelper state.ui.currentPlayBackNote state.ui.currentMidiKeyboardInput)
   loadHeartBeat midiFile (send playBackChannel) (send userChannel) (send endOfTrackChannel)
-  runSignal (app.state ~> \state -> draw state.ui.currentPlayBackNoteIndex state.ui.midiEvents state.ui.colorNotation)
+  runSignal (app.state ~> \state -> draw state.ui.currentPlayBackNoteIndex state.ui.midiEvents state.ui. colorNotation)
   
   return app
 
@@ -94,17 +94,11 @@ draw i midi notationHasColor= do
   return unit
 
 -- TODO use a type alias instead of Foreign
-loadMidi :: forall e. Eff (midi :: MIDI, channel :: CHANNEL | e) { midi :: Channel (Array Foreign), ticks :: Channel Number }
+loadMidi :: forall e. Eff (midi :: MIDI, channel :: CHANNEL | e) { midi :: Channel (Array Foreign), ticks :: 
 loadMidi = do
   midiDataChannel <- channel []
   ticksChannel <- channel 0.0
   MidiPlayer.loadFile midiFile
-  MidiPlayer.loadPlugin
-    { soundfontUrl : "midi/examples/soundfont/"
-    , instrument   : "acoustic_grand_piano" }
-    (const $ MidiPlayer.getData2 (send midiDataChannel) (send ticksChannel))
-  return { midi  : midiDataChannel
-         , ticks : ticksChannel }
 
 midiFile = "colorTest4.mid"
 

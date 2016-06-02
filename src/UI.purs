@@ -58,12 +58,42 @@ type State = { currentMidiKeyboardInput :: MidiNote
 
 update :: Action -> State -> State
 
-update (SetMidiKeyBoardInput n) state = state { currentMidiKeyboardInput = n }
+update (SetMidiKeyBoardInput n) state = state { currentMidiKeyboardInput = n
+                                              , currentPlayBackNoteIndex = if state.recordButtonPressed then
+                                                                             incIndex
+                                                                           else
+                                                                             state.currentPlayBackNoteIndex }
+  where
+    incIndex = let currentNote = Data.Array.head state.userMelody
+                                      in
+                                       if currentNote == Nothing then
+                                         0
+                                       else if (Just n) == currentNote then
+                                              state.currentPlayBackNoteIndex + 1
+                                              else
+                                              state.currentPlayBackNoteIndex
+                                              
 update (PianoKeyPressed x y) state    = state { currentUIPianoSelection  = toMidiNote x y }
 update (SetPlayBackNote n) state      = state { currentPlayBackNote      = n }
 update IncrementPlayBackIndex state   = state { currentPlayBackNoteIndex = state.currentPlayBackNoteIndex + 1 }
 
-update SetUserMelody state            = setMelody state
+update SetUserMelody state            = state { userMelody               = if state.recordButtonPressed then
+                                                                             newMelody
+                                                                           else
+                                                                             state.currentPlayBackMelody
+                                              , currentUserMelodyHead    = fromMaybe 0 $ Data.Array.head newMelody }
+    where
+      newMelody = matchUserInput state.currentMidiKeyboardInput state.userMelody
+      matchUserInput :: MidiNote -> Array MidiNote -> Array MidiNote
+      matchUserInput userNote playBackNotes = let currentNote = Data.Array.head playBackNotes
+                                              in
+                                               if currentNote == Nothing then
+                                                 state.currentPlayBackMelody
+                                               else if (Just userNote) == currentNote then
+                                                      fromMaybe [] $ Data.Array.tail playBackNotes
+                                                    else
+                                                      playBackNotes
+
 update ResetMelody state              = state { userMelody = state.userMelody }
 
 update PlayButtonPressed state        = state { playButtonPressed        = not state.playButtonPressed }
@@ -72,13 +102,18 @@ update StopButtonPressed state        = state { stopButtonPressed        = not s
 update PauseButtonPressed state       = state { pauseButtonPressed       = not state.pauseButtonPressed }
 update LoopButtonPressed state        = state { metronomeButtonPressed   = not state.metronomeButtonPressed  }
 update RecordButtonPressed state      = state { recordButtonPressed      = not state.recordButtonPressed
-                                              , currentPlayBackNoteIndex = -1 }
+                                              , userMelody               = state.currentPlayBackMelody
+                                              , currentPlayBackNoteIndex = if state.recordButtonPressed then
+                                                                             -1
+                                                                               else
+                                                                             0 }
 update MetronomeButtonPressed state   = state { metronomeButtonPressed   = not state.metronomeButtonPressed  }
 
 update NoteHelperResize state         = state { noteHelperActivated      = not state.noteHelperActivated }
 
 update (SetMidiData d) state          = state { midiData              = d
-                                              , currentPlayBackMelody = d}
+                                              , currentPlayBackMelody = d
+                                              , userMelody            = d }
 update (SetTicks d) state             = state { ticks = d }
 update (SetMidiEvent d) state         = if null d then
                                           state { midiEvents    = initEvent
@@ -170,13 +205,13 @@ view state  = do
                                                                             , Pux.div [style { height      : "100%"
                                                                                              , width       : "25%"
                                                                                              , display     : "inline-block"} ] [ Pux.div [ id_ "Record_button"
-                                                                                                                                         , onClick $ const PauseButtonPressed
+                                                                                                                                         , onClick $ const RecordButtonPressed
                                                                                                                                          , style { height     : "100%"
                                                                                                                                                  , width      : "15%"
                                                                                                                                                  , marginLeft : "10%"
                                                                                                                                                  , display    : "inline"
                                                                                                                                                  , float      : "left"
-                                                                                                                                                 , position   : "relative" } ] [ Pux.img [ src "record.png"
+                                                                                                                                                 , position   : "relative" } ] [ Pux.img [ src $ recordButtonPressed state.recordButtonPressed
                                                                                                                                                                                          , style { maxHeight : "100%"
                                                                                                                                                                                                  , maxWidth  : "100%" 
                                                                                                                                                                                                  } ] [] ]] 
@@ -275,8 +310,9 @@ view state  = do
                                                , width      : "100%"
                                                , background : "#F4F4F4"
                                                } ] [ text $ "Currently selected note : " ++ show state.currentPlayBackMelody
-                                                   , text $ "        " ++ show state.ticks
                                                    , text $ "        " ++ show state.currentUserMelodyHead
+                                                   , text $ "        " ++ show state.userMelody                                                     
+                                                   , text $ "        " ++ show state.ticks
                                                    , text $ "        " ++ show state.currentMidiKeyboardInput
                                                    , text $ "        " ++ show state.currentUIPianoSelection
                                                    , text $ "        " ++ show state.currentPlayBackNote
@@ -342,6 +378,11 @@ metronomeButtonPressed b = if b then
                              "metronome_pressed.png"
                            else
                              "metronome.png"
+
+recordButtonPressed b = if b then
+                             "recordPressed.png"
+                           else
+                             "record.png"
 
 resizeWindow b = if b then
                    "5%"
