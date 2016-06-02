@@ -52,26 +52,6 @@ main state = do
   let routeSignal :: Signal Action
       routeSignal = urlSignal ~> \r -> PageView (match r)
 
-<<<<<<< HEAD
-  playBackChannel <- playBackNoteSignal
-  let trackSubscription :: Signal MidiNote
-      trackSubscription       = subscribe playBackChannel
-      incrementPlayBackSignal = trackSubscription ~> incrementPlayIndex 
-      playBackSignal          = trackSubscription ~> setCurrentPlayBackNote
-
-
-  userChannel <- userNoteSignal
-  let userInputSubscription :: Signal MidiNote
-      userInputSubscription = subscribe userChannel
-      userInputSignal       = userInputSubscription ~> setCurrentKeyBoardInput 
-      triggerSignal         = userInputSubscription ~> \midiNote -> setUserMelody
-  runSignal (userInputSubscription ~> \midiNote -> MidiPlayer.logger midiNote)
-
-  endOfTrackChannel <- endOfTrackSignal
-  let endOfTrackSubscription = subscribe endOfTrackChannel
-      endOfTrackSignal :: Signal Action
-      endOfTrackSignal = endOfTrackSubscription ~> resetPlayback
-=======
   playBackChannel <- channel 0
   let trackSignal :: Signal MidiNote
       trackSignal = subscribe playBackChannel
@@ -89,7 +69,6 @@ main state = do
   endOfTrackChannel <- channel false
   let endOfTrackSignal :: Signal Action
       endOfTrackSignal = subscribe endOfTrackChannel ~> resetPlayback
->>>>>>> a4c1e2a6a89f8aa0685c166890dd3fc0e0b0d409
   
   app <- start
     { initialState: state
@@ -106,12 +85,9 @@ main state = do
   
   return app
 
-<<<<<<< HEAD
-draw i midi notationHasColor = do
-=======
+
 -- TODO create Canvas *once*, and clear repeatedly; clearCanvas should take a Canvas value instead of a String
 draw i midi notationHasColor= do
->>>>>>> a4c1e2a6a89f8aa0685c166890dd3fc0e0b0d409
   clearCanvas "notationCanvas"
   canvas <- createCanvas "notationCanvas"
   renderMidi canvas i notationHasColor midi 
@@ -123,45 +99,6 @@ loadMidi = do
   midiDataChannel <- channel []
   ticksChannel <- channel 0.0
   MidiPlayer.loadFile midiFile
-<<<<<<< HEAD
-  MidiPlayer.loadPlugin { soundfontUrl : "midi/examples/soundfont/"
-                        , instrument   : "acoustic_grand_piano" }
-    (const $ MidiPlayer.getData2 mail mail2)
-  return midiChannels
-
--- processForeign d = do
---   ticksPerBeat <- getTicksPerBeat
-  
-  
-
-
--- playBackNoteSignal :: forall e. Eff (heartbeat :: HEARTBEAT, channel :: CHANNEL | e) (Channel MidiNote)
-playBackNoteSignal = do 
-  chan <- channel 0
-  let mail = send chan
-  return chan
-
-endOfTrackSignal = do 
-  chan <- channel false
-  return chan
-
--- userNoteSignal :: forall e. Eff (heartbeat :: HEARTBEAT, channel :: CHANNEL | e) (Channel MidiNote)
-userNoteSignal = do 
-  chan <- channel 0
-  let mail = send chan
-  return chan
-
-midiDataSignal :: forall e. Eff (midi :: MidiPlayer.MIDI, channel :: CHANNEL | e)
- (Channel (Array Foreign))
-midiDataSignal = channel []
-
-=======
-  MidiPlayer.loadPlugin
-    { soundfontUrl : "midi/examples/soundfont/"
-    , instrument   : "acoustic_grand_piano" }
-    (const $ MidiPlayer.getData2 (send midiDataChannel) (send ticksChannel))
-  return { midi: midiDataChannel, ticks: ticksChannel }
->>>>>>> a4c1e2a6a89f8aa0685c166890dd3fc0e0b0d409
 
 midiFile = "colorTest4.mid"
 
