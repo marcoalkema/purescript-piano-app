@@ -4,6 +4,7 @@ import Prelude
 import Data.Array
 import Data.Maybe
 import Data.Foldable
+import VexMusic
 
 type NotationHasColor = Array (Array (Array Boolean))
 type BarHasColor      = Array (Array Boolean)
@@ -45,3 +46,9 @@ compareToIndex i n bar = if n < (i - currentArrayLength) then
     setElementToTrue i v  = updateAt i true v
     setToTrue             :: BarHasColor
     setToTrue             = map (\voice -> fromMaybe (Data.Array.concat bar) (setElementToTrue currentArrayIndex voice)) bar
+
+    --Lenses
+setInitColor :: VexFlowMusic -> NotationHasColor
+setInitColor =  mapVoices $ const false
+  where
+    mapVoices = map <<< map <<< map

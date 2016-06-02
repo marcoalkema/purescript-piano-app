@@ -1,0 +1,448 @@
+diff --git a/src/ColorNotation.purs b/src/ColorNotation.purs
+index 95cc7de..fe27e51 100644
+--- a/src/ColorNotation.purs
++++ b/src/ColorNotation.purs
+@@ -4,6 +4,7 @@ import Prelude
+ import Data.Array
+ import Data.Maybe
+ import Data.Foldable
++import VexMusic
+ 
+ type NotationHasColor = Array (Array (Array Boolean))
+ type BarHasColor      = Array (Array Boolean)
+@@ -45,3 +46,9 @@ compareToIndex i n bar = if n < (i - currentArrayLength) then
+     setElementToTrue i v  = updateAt i true v
+     setToTrue             :: BarHasColor
+     setToTrue             = map (\voice -> fromMaybe (Data.Array.concat bar) (setElementToTrue currentArrayIndex voice)) bar
++
++    --Lenses
++setInitColor :: VexFlowMusic -> NotationHasColor
++setInitColor =  mapVoices $ const false
++  where
++    mapVoices = map <<< map <<< map
+diff --git a/src/Main.purs b/src/Main.purs
+index 98afe65..1ca223c 100644
+--- a/src/Main.purs
++++ b/src/Main.purs
+@@ -65,14 +65,13 @@ main state = do
+       trackSubscription       = subscribe playBackChannel
+       incrementPlayBackSignal = trackSubscription ~> incrementPlayIndex 
+       playBackSignal          = trackSubscription ~> setCurrentPlayBackNote
+-  runSignal (trackSubscription ~> \x -> MidiPlayer.logger x)
+ 
+   userChannel <- userNoteSignal
+   let userInputSubscription :: Signal MidiNote
+       userInputSubscription = subscribe userChannel
+       userInputSignal       = userInputSubscription ~> setCurrentKeyBoardInput 
+       triggerSignal         = userInputSubscription ~> \midiNote -> setUserMelody
+-  runSignal (userInputSubscription ~> \midiNote -> MidiPlayer.logger midiNote)
++  runSignal (userInputSubscription ~> MidiPlayer.logger)
+ 
+   endOfTrackChannel <- endOfTrackSignal
+   let endOfTrackSubscription = subscribe endOfTrackChannel
+@@ -89,30 +88,30 @@ main state = do
+ 
+   renderToDOM "#app" app.html
+ 
+-  runSignal (app.state ~> \state -> drawNoteHelper state.ui.currentPlayBackNote state.ui.currentMidiKeyboardInput )
++  runSignal (app.state ~> \state -> drawNoteHelper state.ui.currentPlayBackNote state.ui.currentMidiKeyboardInput)
+   loadHeartBeat midiFile (send playBackChannel) (send userChannel) (send endOfTrackChannel)
+   runSignal (app.state ~> \state -> draw state.ui.currentPlayBackNoteIndex state.ui.midiEvents state.ui. colorNotation)
+   
+   return app
+ 
+-draw i midi notationHasColor= do
++draw i midi notationHasColor = do
+   clearCanvas "notationCanvas"
++--Move to MAIN  
+   canvas <- createCanvas "notationCanvas"
+   renderMidi canvas i notationHasColor midi 
+   return unit
+ 
++
++-- type alias ipv Foreign
++loadMidi :: forall e. Eff (midi :: MIDI, channel :: CHANNEL | e) { midi :: Channel (Array Foreign), ticks :: Channel Number }
+ loadMidi = do
+-  chan <- channel []
+-  let mail = send chan
+-  chan2 <- channel 0.0
+-  let mail2 = send chan2
+-  let midiChannels = { midi  : chan
+-                     , ticks : chan2 }
++  midiDataChannel <- channel []
++  ticksChannel <- channel 0.0
+   MidiPlayer.loadFile midiFile
+   MidiPlayer.loadPlugin { soundfontUrl : "midi/examples/soundfont/"
+                         , instrument   : "acoustic_grand_piano" }
+-    (const $ MidiPlayer.getData2 mail mail2)
+-  return midiChannels
++    (const $ MidiPlayer.getData2 (send midiDataChannel) (send ticksChannel))
++  return { midi: midiDataChannel, ticks: ticksChannel }
+ 
+ -- processForeign d = do
+ --   ticksPerBeat <- getTicksPerBeat
+@@ -136,6 +135,7 @@ userNoteSignal = do
+   let mail = send chan
+   return chan
+ 
++-- TODO alias
+ midiDataSignal :: forall e. Eff (midi :: MidiPlayer.MIDI, channel :: CHANNEL | e)
+  (Channel (Array Foreign))
+ midiDataSignal = do
+@@ -144,6 +144,7 @@ midiDataSignal = do
+ 
+ midiFile = "colorTest4.mid"
+ 
++-- weer die clear/create business
+ drawNoteHelper playBackNote userNote = do
+   clearRect "noteHelperCanvas"
+   noteHelperCanvas   <- createCanvas "noteHelperCanvas"
+diff --git a/src/UI.purs b/src/UI.purs
+index 41406e0..bc28c14 100644
+--- a/src/UI.purs
++++ b/src/UI.purs
+@@ -66,7 +66,7 @@ update IncrementPlayBackIndex state   = state { currentPlayBackNoteIndex = state
+ update SetUserMelody state            = setMelody state
+ update ResetMelody state              = state { userMelody = state.userMelody }
+ 
+-update PlayButtonPressed state        = state { playButtonPressed        = not state.playButtonPressed  }
++update PlayButtonPressed state        = state { playButtonPressed        = not state.playButtonPressed }
+ update StopButtonPressed state        = state { stopButtonPressed        = not state.playButtonPressed
+                                               , currentPlayBackNoteIndex = -1 }
+ update PauseButtonPressed state       = state { pauseButtonPressed       = not state.pauseButtonPressed }
+@@ -77,7 +77,8 @@ update MetronomeButtonPressed state   = state { metronomeButtonPressed   = not s
+ 
+ update NoteHelperResize state         = state { noteHelperActivated      = not state.noteHelperActivated }
+ 
+-update (SetMidiData d) state          = state { midiData      = d }
++update (SetMidiData d) state          = state { midiData              = d
++                                              , currentPlayBackMelody = d}
+ update (SetTicks d) state             = state { ticks = d }
+ update (SetMidiEvent d) state         = if null d then
+                                           state { midiEvents    = initEvent
+@@ -89,11 +90,7 @@ update (SetMidiEvent d) state         = if null d then
+     midi = renderMidiPure d state.ticks
+ update ResetPlayback state            = state { currentPlayBackNoteIndex = -1 }
+ 
+---Lenses
+-setInitColor :: VexFlowMusic -> NotationHasColor
+-setInitColor =  mapVoices $ const false
+-  where
+-    mapVoices = map <<< map <<< map
++
+ 
+ init :: State
+ init = { currentMidiKeyboardInput : 60
+@@ -277,7 +274,7 @@ view state  = do
+                                                -- , fontSize   : "33"  
+                                                , width      : "100%"
+                                                , background : "#F4F4F4"
+-                                               } ] [ text $ "Currently selected note : " ++ show state.midiData
++                                               } ] [ text $ "Currently selected note : " ++ show state.currentPlayBackMelody
+                                                    , text $ "        " ++ show state.ticks
+                                                    , text $ "        " ++ show state.currentUserMelodyHead
+                                                    , text $ "        " ++ show state.currentMidiKeyboardInput
+diff --git a/src/heartbeat.js b/src/heartbeat.js
+index 8ee3500..d306096 100644
+--- a/src/heartbeat.js
++++ b/src/heartbeat.js
+@@ -8,149 +8,166 @@ module.exports = {
+ 	return function(send1){
+ 	    return function(send2){
+ 		return function(send3){
+-		return function(){
+-
+-		    var btnPlay = document.getElementById('Play_button');
+-		    var btnPause = document.getElementById('Pause_button');
+-		    var btnStop = document.getElementById('Stop_button');
+-		    var btnMetronome = document.getElementById('Metronome');
+-
+-		    
+-		    var sequencer = window.sequencer;
++		    return function(){
++			
++			var btnPlay = document.getElementById('Play_button');
++			var btnPause = document.getElementById('Pause_button');
++			var btnStop = document.getElementById('Stop_button');
++			var btnMetronome = document.getElementById('Metronome');
+ 
+-		    // sequencer.addMidiFile({url: 'http://abumarkub.net/heartbeatjs/assets/minute_waltz.mid'});
+-		    // sequencer.addAssetPack({url: 'http://abumarkub.net/heartbeatjs/assets/asset_pack_basic.json'}, init);
+-		    
+-		    sequencer.ready(function init(){
+ 			
+-			sequencer.addMidiFile({url: file}, function() {
++			var sequencer = window.sequencer;
++			
++			sequencer.ready(function(){
+ 			    
+-			    var midiFile = window.sequencer.getMidiFile(file.split('.mid').join(''));
+-			    var song = window.sequencer.createSong(midiFile);
+-			    // var piano = sequencer.createInstrument('piano');
++			    sequencer.addAssetPack({url: 'http://abumarkub.net/heartbeatjs/assets/asset_pack_basic.json'},
+ 
+-			    //Handler for MIDI track
+-			    song.addEventListener('event', 'type = NOTE_ON', function(midiEvent){
+-				send1(midiEvent.data1)();
+-			    });
+-			    
+-			    song.addEventListener('end', function(midiEvent){
+-				console.log("EINDE");
+-				send3(true)();
+-			    });
++						   (function init(){
++						       
++						       sequencer.addMidiFile({url: file}, function() {
++							   
++							   var midiFile = window.sequencer.getMidiFile(file.split('.mid').join(''));
++							   var song = window.sequencer.createSong(midiFile);
++							   var piano = sequencer.createInstrument('piano');
+ 
+-			    //Handler for MIDI keyboard
+-			    song.addMidiEventListener('note on', function(midi){
+-				var midiNote = midi.data1;
+-				var events = sequencer.util.getRandomNotes({
+-				    minNoteNumber: midiNote + 12,
+-				    maxNoteNumber: midiNote + 12,
+-				    minVelocity: 100,
+-				    maxVelocity: 100,
+-				    noteDuration: 100, //ticks
+-				    numNotes: 1
+-				});
+-				
+-				sequencer.processEvents(events, 120);
+-				
+-				send2(midiNote)();
+-			    });
++							   song.tracks.forEach(function(track){
++							       track.setInstrument(piano);
++							   });
+ 
+-			    //Handler for UI Piano
+-			    var arr = Array.apply(null, Array(71)).map(function (_, i) {return ((i + 12));});
+-			    arr.map(function(n){
+-			    	var key = "pianoKey".concat(n.toString());
+-			    	var pianoKey = document.getElementById(key);
+-				
+-			    	pianoKey.addEventListener('click', function(event){
+-				    
+-			    	    var eventId = event.path[1].id;
+-			    	    var noteNumber = ((eventId.split('pianoKey').join('')));
+-			    	    var events = sequencer.util.getRandomNotes({
+-			    	    minNoteNumber: Number(noteNumber) + 12,
+-			    	    maxNoteNumber: Number(noteNumber) + 12,
+-			    	    minVelocity: 100,
+-			    	    maxVelocity: 100,
+-			    	    noteDuration: 200, //ticks
+-			    	    numNotes: 1
+-			    	});
+-				    
+-			    	    sequencer.processEvents(events, 120);
+-				    
+-			    	});
+-				
+-			    });
+-			    
+-			    
+-			    //HANDLERS FOR UI BUTTONS
+-			    btnPlay.addEventListener('click', function(){
+-				song.play();
+-			    });
+-			
+-			    btnPause.addEventListener('click', function(){
+-				song.pause();
+-			    });
+-			    
+-			    btnStop.addEventListener('click', function(){
+-			    	song.stop();
+-			    });
+-			    
+-			    btnMetronome.addEventListener('click', function(){
+-				console.log("CLICKED");
+-				if(song.useMetronome === true){
+-				    song.useMetronome = false;
+-				    btnMetronome.value = 'metronome on';
+-				}else if(song.useMetronome === false){
+-				    song.useMetronome = true;
+-					btnMetronome.value = 'metronome off';
+-				}
+-			    });
++							   var track = song.tracks[0];
++							   track.monitor = true;
++							   track.setMidiInput('all');
++							   track.setInstrument('piano');
+ 
+-			    // function matchNote(noteNumber){
+-			    // 	if (noteNumber == 0) {
+-			    // 	    return "c";
+-			    // 	};
+-			    // 	if (noteNumber == 1) {
+-			    // 	    return "c#";
+-			    // 	};
+-			    // 	if (noteNumber == 2) {
+-			    // 	    return "d";
+-			    // 	};
+-			    // 	if (noteNumber == 3) {
+-			    // 	    return "d#";
+-			    // 	};
+-			    // 	if (noteNumber == 4) {
+-			    // 	    return "e";
+-			    // 	};
+-			    // 	if (noteNumber == 5) {
+-			    // 	    return "f";
+-			    // 	};
+-			    // 	if (noteNumber == 6) {
+-			    // 	    return "f#";
+-			    // 	};
+-			    // 	if (noteNumber == 7) {
+-			    // 	    return "g";
+-			    // 	};
+-			    // 	if (noteNumber == 8) {
+-			    // 	    return "g#";
+-			    // 	};
+-			    // 	if (noteNumber == 9) {
+-			    // 	    return "a";
+-			    // 	};
+-			    // 	if (noteNumber == 10) {
+-			    // 	    return "a#";
+-			    // 	};
+-			    // 	if (noteNumber == 11) {
+-			    // 	    return "b";
+-			    // 	};				
+-			    // };
++							   // song.addMidiEventListener(sequencer.NOTE_ON, function(midi){
++							   //     var noteNumber = sequencer.getNoteNumber(this.id);
++							   //     send2(noteNumber)();
++							   //     // track.processMidiEvent(sequencer.createMidiEvent(0, sequencer.NOTE_ON, noteNumber, 100));
++							   // });
++							   
++							   //Handler for MIDI track
++							   song.addEventListener('event', 'type = NOTE_ON', function(midiEvent){
++							       send1(midiEvent.data1)();
++							   });
++							   
++							   song.addEventListener('end', function(midiEvent){
++							       console.log("EINDE");
++							       send3(true)();
++							   });
++							   
++							   //Handler for MIDI keyboard
++							   song.addMidiEventListener('note on', function(midi){
++							       var midiNote = midi.data1;							       
++							       send2(midiNote)();
++							   });
++							   
++							   //Handler for UI Piano
++							   var arr = Array.apply(null, Array(71)).map(function (_, i) {return ((i + 12));});
++							   arr.map(function(n){
++			    				   var key = "pianoKey".concat(n.toString());
++			    				       var pianoKey = document.getElementById(key);
++							       
++			    				   pianoKey.addEventListener('click', function(event){
++							       console.log(event);
++							       // var noteNumber = sequencer.getNoteNumber(this.id);
++							       // track.processMidiEvent(sequencer.createMidiEvent(0, sequencer.NOTE_ON, 60, 100))();
+ 
++			    				       var eventId = event.path[1].id;
++			    				       var noteNumber = ((eventId.split('pianoKey').join('')));
++
++							       var event1 = sequencer.createMidiEvent(0, sequencer.NOTE_ON, noteNumber, 100);
++							       var event2 = sequencer.createMidiEvent(480, sequencer.NOTE_OFF, noteNumber, 0);
++							       
++							       console.log(event1);
++							       console.log(track);
++			    				       var events = sequencer.util.getRandomNotes({
++			    				       	   minNoteNumber: Number(noteNumber) + 12,
++			    				       	   maxNoteNumber: Number(noteNumber) + 12,
++			    				       	   minVelocity: 100,
++			    				       	   maxVelocity: 100,
++			    				       	   noteDuration: 200, //ticks
++			    				       	   numNotes: 1
++			    				       });
++							       console.log(events);
++							       // track.processMidiEvent(event1);
++			    				       sequencer.processEvents(event1, 120);
++							       
++			    				   });
++							       
++							   });
++							   
++							   
++							   //HANDLERS FOR UI BUTTONS
++							   btnPlay.addEventListener('click', function(){
++							       song.play();
++							   });
++							   
++							   btnPause.addEventListener('click', function(){
++							       song.pause();
++							   });
++							   
++							   btnStop.addEventListener('click', function(){
++			    				       song.stop();
++							   });
++							   
++							   btnMetronome.addEventListener('click', function(){
++							       if(song.useMetronome === true){
++								   song.useMetronome = false;
++								   btnMetronome.value = 'metronome on';
++							       }else if(song.useMetronome === false){
++								   song.useMetronome = true;
++								   btnMetronome.value = 'metronome off';
++							       }
++							   });
++							   
++							   // function matchNote(noteNumber){
++							   // 	if (noteNumber == 0) {
++							   // 	    return "c";
++							   // 	};
++							   // 	if (noteNumber == 1) {
++							   // 	    return "c#";
++							   // 	};
++							   // 	if (noteNumber == 2) {
++							   // 	    return "d";
++							   // 	};
++							   // 	if (noteNumber == 3) {
++							   // 	    return "d#";
++							   // 	};
++							   // 	if (noteNumber == 4) {
++							   // 	    return "e";
++							   // 	};
++							   // 	if (noteNumber == 5) {
++							   // 	    return "f";
++							   // 	};
++							   // 	if (noteNumber == 6) {
++							   // 	    return "f#";
++							   // 	};
++							   // 	if (noteNumber == 7) {
++							   // 	    return "g";
++							   // 	};
++							   // 	if (noteNumber == 8) {
++							   // 	    return "g#";
++							   // 	};
++							   // 	if (noteNumber == 9) {
++							   // 	    return "a";
++							   // 	};
++							   // 	if (noteNumber == 10) {
++							   // 	    return "a#";
++							   // 	};
++							   // 	if (noteNumber == 11) {
++							   // 	    return "b";
++							   // 	};				
++							   // };
++							   
++						       });
++						   })
++						  );
+ 			});
+-		    });
+-		};
++		    };
+ 		};
+-		
+ 	    };
+ 	};
+-    }		   
++    }
+ };
++			
++					      

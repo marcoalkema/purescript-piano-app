@@ -66,7 +66,7 @@ update IncrementPlayBackIndex state   = state { currentPlayBackNoteIndex = state
 update SetUserMelody state            = setMelody state
 update ResetMelody state              = state { userMelody = state.userMelody }
 
-update PlayButtonPressed state        = state { playButtonPressed        = not state.playButtonPressed  }
+update PlayButtonPressed state        = state { playButtonPressed        = not state.playButtonPressed }
 update StopButtonPressed state        = state { stopButtonPressed        = not state.playButtonPressed
                                               , currentPlayBackNoteIndex = -1 }
 update PauseButtonPressed state       = state { pauseButtonPressed       = not state.pauseButtonPressed }
@@ -77,7 +77,8 @@ update MetronomeButtonPressed state   = state { metronomeButtonPressed   = not s
 
 update NoteHelperResize state         = state { noteHelperActivated      = not state.noteHelperActivated }
 
-update (SetMidiData d) state          = state { midiData      = d }
+update (SetMidiData d) state          = state { midiData              = d
+                                              , currentPlayBackMelody = d}
 update (SetTicks d) state             = state { ticks = d }
 update (SetMidiEvent d) state         = if null d then
                                           state { midiEvents    = initEvent
@@ -89,11 +90,7 @@ update (SetMidiEvent d) state         = if null d then
     midi = renderMidiPure d state.ticks
 update ResetPlayback state            = state { currentPlayBackNoteIndex = -1 }
 
---Lenses
-setInitColor :: VexFlowMusic -> NotationHasColor
-setInitColor =  mapVoices $ const false
-  where
-    mapVoices = map <<< map <<< map
+
 
 init :: State
 init = { currentMidiKeyboardInput : 60
@@ -277,7 +274,7 @@ view state  = do
                                                -- , fontSize   : "33"  
                                                , width      : "100%"
                                                , background : "#F4F4F4"
-                                               } ] [ text $ "Currently selected note : " ++ show state.midiData
+                                               } ] [ text $ "Currently selected note : " ++ show state.currentPlayBackMelody
                                                    , text $ "        " ++ show state.ticks
                                                    , text $ "        " ++ show state.currentUserMelodyHead
                                                    , text $ "        " ++ show state.currentMidiKeyboardInput

@@ -65,7 +65,7 @@ main state = do
       trackSubscription       = subscribe playBackChannel
       incrementPlayBackSignal = trackSubscription ~> incrementPlayIndex 
       playBackSignal          = trackSubscription ~> setCurrentPlayBackNote
-  runSignal (trackSubscription ~> \x -> MidiPlayer.logger x)
+
 
   userChannel <- userNoteSignal
   let userInputSubscription :: Signal MidiNote
@@ -95,7 +95,7 @@ main state = do
   
   return app
 
-draw i midi notationHasColor= do
+draw i midi notationHasColor = do
   clearCanvas "notationCanvas"
   canvas <- createCanvas "notationCanvas"
   renderMidi canvas i notationHasColor midi 
@@ -138,9 +138,8 @@ userNoteSignal = do
 
 midiDataSignal :: forall e. Eff (midi :: MidiPlayer.MIDI, channel :: CHANNEL | e)
  (Channel (Array Foreign))
-midiDataSignal = do
-  chan <- channel []
-  return chan
+midiDataSignal = channel []
+
 
 midiFile = "colorTest4.mid"
 
