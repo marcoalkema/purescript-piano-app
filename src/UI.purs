@@ -1,7 +1,7 @@
 module App.UI where
 
 import Prelude
-import Prelude (map)
+import Prelude (map, (/))
 import Math
 import Math (max)
 import Data.Int (round, toNumber)
@@ -22,7 +22,7 @@ import Data.Foreign
 import ColorNotation
 import VexMusic
 
-data Action = PlayButtonPressed | PauseButtonPressed | StopButtonPressed | LoopButtonPressed | RecordButtonPressed | MetronomeButtonPressed | NoteHelperResize | IncrementPlayBackIndex | SetUserMelody | ResetMelody | SetMidiKeyBoardInput MidiNote | PianoKeyPressed Note Octave | SetPlayBackNote MidiNote | SetMidiData (Array MidiNote) | SetMidiEvent (Array Foreign) | SetTicks Number | ResetPlayback
+data Action = PlayButtonPressed | PauseButtonPressed | StopButtonPressed | LoopButtonPressed | RecordButtonPressed | MetronomeButtonPressed | NoteHelperResize | IncrementPlayBackIndex | ResetMelody | SetMidiKeyBoardInput MidiNote | PianoKeyPressed Note Octave | SetPlayBackNote MidiNote | SetMidiData (Array MidiNote) | SetMidiEvent (Array Foreign) | SetTicks Number | ResetPlayback | ScoreOkButtonPressed
 
 data Note = NoteC | NoteCis | NoteD | NoteDis | NoteE | NoteF | NoteFis | NoteG | NoteGis | NoteA | NoteAis | NoteB
 
@@ -51,6 +51,8 @@ type State = { currentMidiKeyboardInput :: MidiNote
              , ticks                    :: Number
              , midiEvents               :: VexFlowResult
              , colorNotation            :: NotationHasColor
+
+             , scoreWindowActivated     :: Boolean
                
              , noteHelperActivated      :: Boolean
              , playButtonPressed        :: Boolean
@@ -76,7 +78,11 @@ update (SetMidiKeyBoardInput n) state = state { currentMidiKeyboardInput = n
                                                                              newMelody
                                                                            else
                                                                              state.currentPlayBackMelody
-                                              , currentUserMelodyHead    = fromMaybe 0 $ Data.Array.head newMelody }
+                                              , currentUserMelodyHead    = fromMaybe 0 $ Data.Array.head newMelody
+                                              , scoreWindowActivated     = if currentNote == Nothing then
+                                                                             true
+                                                                           else
+                                                                             false }
     where
       currentNote = Data.Array.head state.userMelody
       newMelody = matchUserInput state.userMelody
@@ -112,7 +118,8 @@ update RecordButtonPressed state      = state { recordButtonPressed      = not s
                                                                              -1
                                                                                else
                                                                              0 }
-update MetronomeButtonPressed state   = state { metronomeButtonPressed   = not state.metronomeButtonPressed  }
+update MetronomeButtonPressed state   = state { metronomeButtonPressed   = not state.metronomeButtonPressed }
+update ScoreOkButtonPressed state     = state { scoreWindowActivated     = false }
 
 update NoteHelperResize state         = state { noteHelperActivated      = not state.noteHelperActivated }
 
@@ -149,6 +156,8 @@ init = { currentMidiKeyboardInput : 60
        , ticks                    : 480.0
        , midiEvents               : initEvent
        , colorNotation            : [[[]]]
+
+       , scoreWindowActivated     : true
          
        , noteHelperActivated      : false
        , playButtonPressed        : false
@@ -284,21 +293,12 @@ view state  = do
                                                , position   : "absolute"
                                                , left       : "0%"
                                                , background : "#DDDDDD"
-                                                 -- , border     : "2px solid #ddd"
                                                , top        : "11%"
                                                , overflow   : "scroll" }] [] 
-                               
-                             
-
--- <div>tempo: 120bpm</div><input type="range" id="tempo" min="0" max="1" step="0.01" value="0"/>
-                               
                              , Pux.div [ id_ "fooBar"
                                        , style { height     : "1%"
                                                , width      : "100%"
                                                , background : "#F4F4F4"} ] []
-                             -- , Pux.div [ style { height     : "0.3%"
-                             --                   , width      : "100%"
-                             --                   , background : "#D4D4D4"] []
                              , Pux.div [ style { height     : "3%"
                                                , width      : "100%"
                                                , background : "white"} ] []
@@ -314,7 +314,6 @@ view state  = do
                                                                                    , height "1000%"
                                                                                    , width "1240%" ] [text "HOI"] ]
                              , Pux.div [ style { height     : "6%"
-                                               -- , fontSize   : "33"  
                                                , width      : "100%"
                                                , background : "#F4F4F4"
                                                } ] [ text $ "Currently selected note : " ++ show state.currentPlayBackMelody
@@ -345,8 +344,34 @@ view state  = do
                                                                                                       , position   : "absolute"
                                                                                                       , background : "#a4a4a4"
                                                                                                       , display    : "inline" }] [] ]
+                             , Pux.div [style { height     : resizeWindow' state.scoreWindowActivated 40
+                                              , width      : resizeWindow' state.scoreWindowActivated 40
+                                              , top        : "25%"
+                                              , left       : "30%"
+                                              , position   : "absolute"
+                                              , background : "#FFFFFF"
+                                              , fontSize   : "36px" }] [ Pux.div [style { height  : "70%"
+                                                                                        , width   : "100%"} ] [ Pux.div [style { height : "20%"
+                                                                                                                               , width  : "70%"
+                                                                                                                               , marginTop : "2%"
+                                                                                                                               , marginLeft   : "25%"
+                                                                                                                            }] [text $ displayScore state]]
+                                                                       , Pux.div [style { height  : "30%"
+                                                                                        , width   : "100%" }] [ Pux.div [style { height : "100%"
+                                                                                                                                    -- , width  : "33,3%"
+                                                                                                                                    , borderLeft   : "33.3%"
+                                                                                                                                    , display : "inline"} ] [ Pux.div [ style { height : "100%"
+                                                                                                                                                                               , width  : "100%"} ] [ Pux.img [ onClick $ const ScoreOkButtonPressed
+                                                                                                                                                                                                              , src "okButton.png"
+                                                                                                                                                                                                              , style { height : "50%"
+                                                                                                                                                                                                                      , top      : "30%"
+                                                                                                                                                                                                                      , marginLeft : "39%"
+                                                                                                                                                                                                                      , position : "relative"}] [] ]]]
+                               ]
                              ]
-                            ) ]
+                             
+                             
+                            )]
 
 buttons state = [ Pux.div [ id_ "Play_button"
                           , onClick $ const PlayButtonPressed
@@ -381,7 +406,7 @@ buttons state = [ Pux.div [ id_ "Play_button"
                                                                     , style { maxHeight : "100%"
                                                                             , maxWidth  : "100%" 
                                                                             } ] [] ]
-            ]
+          ]
           
 metronomeButtonPressed b = if b then
                              "metronome_pressed.png"
@@ -396,8 +421,26 @@ recordButtonPressed b = if b then
 resizeWindow b = if b then
                    "5%"
                  else
-                   "0"
+                   "0%"
 
+resizeWindow' :: Boolean -> Int -> String
+resizeWindow' b size = if b then
+                         (++) (show size) "%"
+                       else
+                         "0%"
+
+displayScore :: State -> String
+displayScore s = if s.scoreWindowActivated then
+                       "Your score is: " ++ (show $ round $ userScore s) ++ "%"
+                     else
+                       ""
+
+
+userScore :: State -> Number
+userScore state = if length state.userNotes == 0 then
+                    0.0
+                  else
+                    (toNumber $ length state.currentPlayBackMelody) / (toNumber $ length state.userNotes) * 100.0
 
 noteHelperSize :: Boolean -> String
 noteHelperSize isActivated = if isActivated then "100" else "0"
