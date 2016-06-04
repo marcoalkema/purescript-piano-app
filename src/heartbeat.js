@@ -20,14 +20,21 @@ module.exports = {
 				       
 				       sequencer.addMidiFile({url: file}, function() {
 					   
-					   var btnPlay = document.getElementById('Play_button');
-					   var btnPause = document.getElementById('Pause_button');
-					   var btnStop = document.getElementById('Stop_button');
+					   var btnPlay      = document.getElementById('Play_button');
+					   var btnPause     = document.getElementById('Pause_button');
+					   var btnStop      = document.getElementById('Stop_button');
+					   var btnRecord    = document.getElementById('Record_button');
 					   var btnMetronome = document.getElementById('Metronome');
+					   var btnLoop      = document.getElementById('Loop_button');
 					   
 					   var midiFile = window.sequencer.getMidiFile(file.split('.mid').join(''));
 					   var song = window.sequencer.createSong(midiFile);
+
 					   var piano = sequencer.createInstrument('piano');
+
+					   var setRecord    = false;
+					   var setMetronome = false;
+					   var setLoop      = false;
 
 					   // Create handlers for UI Piano buttons
 					   var keys = {};							   
@@ -51,7 +58,14 @@ module.exports = {
 					   track.monitor = true;
 					   track.setMidiInput('all');
 					   track.setInstrument('piano');
-					   
+
+					   var track2 = sequencer.createTrack();
+					   track2.monitor = true;
+					   song.addTrack(track2);
+
+					   track.movePart(song.tracks[0].parts[0], 960 * 4);
+					   song.update();
+
 					   
 					   function updateOnScreenKeyboard(event){
 					       send2(event.data1)();
@@ -71,10 +85,16 @@ module.exports = {
 					   // TODO: Use note_off when UI handles lists of notes
 					   // track.addMidiEventListener(sequencer.NOTE_OFF, updateOnScreenKeyboard);
 					   
-					   
 					   //Handler for MIDI track
 					   song.addEventListener('event', 'type = NOTE_ON', function(midiEvent){
-					       send1(midiEvent.data1)();
+					       if ((setMetronome == false) && midiEvent.tick == 0) {
+						   song.useMetronome = false;
+						   // song.update();
+					       }
+					       if (setRecord == false) {
+						   send1(midiEvent.data1)();
+					       }
+					       
 					   });
 					   
 					   //Handler for end of track
@@ -84,25 +104,62 @@ module.exports = {
 					   
 					   //HANDLERS FOR UI BUTTONS
 					   btnPlay.addEventListener('click', function(){
+					       song.stop();
+					       if (setLoop == false){
+						   song.setLoop(false);
+					       }
+					       else if (setLoop == true){
+						   song.setLoop(true);
+					       }
+					       setRecord = false;
+					       track.mute = false;
+					       song.useMetronome = true;
 					       song.play();
 					   });
 					   
 					   btnPause.addEventListener('click', function(){
-					       song.pause();
+					       if (setRecord == false){
+						   song.pause();
+					       }
 					   });
 					   
 					   btnStop.addEventListener('click', function(){
+					       setRecord = false;
 			    		       song.stop();
 					   });
-					   
+
+					   btnRecord.addEventListener('click', function(){
+					       setRecord = !setRecord;
+					       song.stop();
+					       if (setRecord == true) {
+						   track.mute = true;
+						   song.useMetronome = true;
+						   song.setLoop();
+						   song.setLeftLocator('barsbeats', 1,1,1,0);
+						   song.setRightLocator('barsbeats', 2,1,1,0);
+						   song.update();
+						   song.play();
+					       }
+					       else if(setRecord == false){
+						   track.mute = false;
+						   song.update();
+					       }
+					   });
+
+					   //BUGGY: Metronome is only off during record when clicked twice.
 					   btnMetronome.addEventListener('click', function(){
+					       setMetronome = !setMetronome;
 					       if(song.useMetronome === true){
 						   song.useMetronome = false;
-								   btnMetronome.value = 'metronome on';
+						   btnMetronome.value = 'metronome on';
 					       }else if(song.useMetronome === false){
-						   song.useMetronome = true;
+						   song.useMetronome = true;;
 						   btnMetronome.value = 'metronome off';
 					       }
+					   });
+
+					   btnLoop.addEventListener('click', function(){
+					       setLoop = !setLoop;
 					   });
 					   
 				       });

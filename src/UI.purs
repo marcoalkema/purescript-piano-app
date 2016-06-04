@@ -109,7 +109,9 @@ update ResetMelody state              = state { userMelody = state.userMelody }
 
 update PlayButtonPressed state        = state { playButtonPressed        = not state.playButtonPressed }
 update StopButtonPressed state        = state { stopButtonPressed        = not state.playButtonPressed
-                                              , currentPlayBackNoteIndex = -1 }
+                                              , currentPlayBackNoteIndex = -1
+                                              , recordButtonPressed      = false
+                                              , playButtonPressed        = false }
 update PauseButtonPressed state       = state { pauseButtonPressed       = not state.pauseButtonPressed }
 update LoopButtonPressed state        = state { metronomeButtonPressed   = not state.metronomeButtonPressed  }
 update RecordButtonPressed state      = state { recordButtonPressed      = not state.recordButtonPressed
@@ -157,7 +159,7 @@ init = { currentMidiKeyboardInput : 60
        , midiEvents               : initEvent
        , colorNotation            : [[[]]]
 
-       , scoreWindowActivated     : true
+       , scoreWindowActivated     : false
          
        , noteHelperActivated      : false
        , playButtonPressed        : false
