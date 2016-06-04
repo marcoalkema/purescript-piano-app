@@ -26,6 +26,7 @@ module.exports = {
 					   var btnRecord    = document.getElementById('Record_button');
 					   var btnMetronome = document.getElementById('Metronome');
 					   var btnLoop      = document.getElementById('Loop_button');
+					   var foo          = document.getElementById('notationCanvas');
 					   
 					   var midiFile = window.sequencer.getMidiFile(file.split('.mid').join(''));
 					   var song = window.sequencer.createSong(midiFile);
@@ -89,7 +90,6 @@ module.exports = {
 					   song.addEventListener('event', 'type = NOTE_ON', function(midiEvent){
 					       if ((setMetronome == false) && midiEvent.tick == 0) {
 						   song.useMetronome = false;
-						   // song.update();
 					       }
 					       if (setRecord == false) {
 						   send1(midiEvent.data1)();
@@ -126,6 +126,16 @@ module.exports = {
 					   btnStop.addEventListener('click', function(){
 					       setRecord = false;
 			    		       song.stop();
+					   });
+
+					   foo.addEventListener('oninput', function(event){
+					       console.log(event);
+					   });
+
+					   var canvas = document.getElementById("notationCanvas");
+					   console.log(canvas);
+					   canvas.addEventListener("onchange", function(event){
+					       console.log("HOIHOIHOI");
 					   });
 
 					   btnRecord.addEventListener('click', function(){

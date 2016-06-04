@@ -46,6 +46,7 @@ type State = { currentMidiKeyboardInput :: MidiNote
              , currentUserMelodyHead    :: MidiNote
              , currentNoteHelperNote    :: MidiNote
              , userNotes                :: Array MidiNote
+             , lastNote                 :: Array MidiNote
 
              , midiData                 :: Array MidiNote
              , ticks                    :: Number
@@ -79,11 +80,13 @@ update (SetMidiKeyBoardInput n) state = state { currentMidiKeyboardInput = n
                                                                            else
                                                                              state.currentPlayBackMelody
                                               , currentUserMelodyHead    = fromMaybe 0 $ Data.Array.head newMelody
-                                              , scoreWindowActivated     = if currentNote == Nothing then
-                                                                             true
-                                                                           else
-                                                                             false }
+                                              , scoreWindowActivated     = checkLastNote n }
     where
+      checkLastNote n = if (state.currentPlayBackNoteIndex == length state.midiData - 1) && ((Just n) == (currentNote)) then
+                          true
+                        else
+                          false
+      currentNote :: Maybe Int
       currentNote = Data.Array.head state.userMelody
       newMelody = matchUserInput state.userMelody
       incIndex = if currentNote == Nothing then
@@ -127,7 +130,8 @@ update NoteHelperResize state         = state { noteHelperActivated      = not s
 
 update (SetMidiData d) state          = state { midiData              = d
                                               , currentPlayBackMelody = d
-                                              , userMelody            = d }
+                                              , userMelody            = d
+                                              , lastNote              = reverse <<< take 2 $ reverse d }
 update (SetTicks d) state             = state { ticks = d }
 update (SetMidiEvent d) state         = if null d then
                                           state { midiEvents    = initEvent
@@ -153,6 +157,7 @@ init = { currentMidiKeyboardInput : 60
        , currentUserMelodyHead    : 0
        , currentNoteHelperNote    : 60
        , userNotes                : []
+       , lastNote                 : []
 
        , midiData                 : []
        , ticks                    : 480.0
@@ -326,6 +331,7 @@ view state  = do
                                                    , text $ "        " ++ show state.currentUIPianoSelection
                                                    , text $ "        " ++ show state.currentPlayBackNote
                                                    , text $ "        " ++ show state.currentPlayBackNoteIndex
+                                                   , text $ "        " ++ show state.lastNote
                                                    , text $ "        " ++ show state.userNotes ]
                              , Pux.div [ style { height     : "20%"
                                                , width      : noteHelperDivSize state.noteHelperActivated ++ "%"
