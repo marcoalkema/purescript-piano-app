@@ -62,7 +62,6 @@ main state = do
   let userInputSignal       :: Signal MidiNote
       userInputSignal       = subscribe userChannel
       keyboardInputSignal   = userInputSignal ~> setCurrentKeyBoardInput
-      triggerSignal         = userInputSignal ~> \midiNote -> setUserMelody
 
   endOfTrackChannel <- channel false
   let endOfTrackSignal :: Signal Action
@@ -72,7 +71,7 @@ main state = do
     { initialState: state
     , update: fromSimple update
     , view: view
-    , inputs: [fromMaybe routeSignal $ mergeMany [routeSignal, playBackSignal, incrementPlayBackSignal, keyboardInputSignal, triggerSignal, processedMidiSignal, midiEventSignal, ticksSignal, endOfTrackSignal]]
+    , inputs: [fromMaybe routeSignal $ mergeMany [routeSignal, playBackSignal, incrementPlayBackSignal, keyboardInputSignal, processedMidiSignal, midiEventSignal, ticksSignal, endOfTrackSignal]]
     }
 
   renderToDOM "#app" app.html
@@ -143,9 +142,6 @@ incrementPlayIndex _ = Child (UI.IncrementPlayBackIndex)
 
 setCurrentPlayBackNote :: MidiNote -> App.Layout.Action
 setCurrentPlayBackNote = Child <<< UI.SetPlayBackNote
-
-setUserMelody :: App.Layout.Action
-setUserMelody = Child (UI.SetUserMelody)
 
 setMidiData :: (Array MidiNote) -> App.Layout.Action
 setMidiData = Child <<< UI.SetMidiData

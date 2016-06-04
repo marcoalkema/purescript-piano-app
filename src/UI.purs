@@ -45,6 +45,7 @@ type State = { currentMidiKeyboardInput :: MidiNote
              , userMelody               :: Array MidiNote
              , currentUserMelodyHead    :: MidiNote
              , currentNoteHelperNote    :: MidiNote
+             , userNotes                :: Array MidiNote
 
              , midiData                 :: Array MidiNote
              , ticks                    :: Number
@@ -63,41 +64,40 @@ update :: Action -> State -> State
 
 update (SetMidiKeyBoardInput n) state = state { currentMidiKeyboardInput = n
                                               , currentSelectedNote      = n
+                                              , userNotes                = if state.recordButtonPressed then
+                                                                             snoc state.userNotes n
+                                                                           else
+                                                                             []
                                               , currentPlayBackNoteIndex = if state.recordButtonPressed then
                                                                              incIndex
                                                                            else
-                                                                             state.currentPlayBackNoteIndex }
-  where
-    incIndex = let currentNote = Data.Array.head state.userMelody
-                                      in
-                                       if currentNote == Nothing then
-                                         0
-                                       else if (Just n) == currentNote then
-                                              state.currentPlayBackNoteIndex + 1
-                                              else
-                                              state.currentPlayBackNoteIndex
-                                              
-update (PianoKeyPressed x y) state    = state { currentUIPianoSelection  = toMidiNote x y
-                                              , currentSelectedNote      = toMidiNote x y }
-update (SetPlayBackNote n) state      = state { currentPlayBackNote      = n }
-update IncrementPlayBackIndex state   = state { currentPlayBackNoteIndex = state.currentPlayBackNoteIndex + 1 }
-
-update SetUserMelody state            = state { userMelody               = if state.recordButtonPressed then
+                                                                             state.currentPlayBackNoteIndex
+                                              , userMelody               = if state.recordButtonPressed then
                                                                              newMelody
                                                                            else
                                                                              state.currentPlayBackMelody
                                               , currentUserMelodyHead    = fromMaybe 0 $ Data.Array.head newMelody }
     where
-      newMelody = matchUserInput state.currentMidiKeyboardInput state.userMelody
-      matchUserInput :: MidiNote -> Array MidiNote -> Array MidiNote
-      matchUserInput userNote playBackNotes = let currentNote = Data.Array.head playBackNotes
-                                              in
-                                               if currentNote == Nothing then
-                                                 state.currentPlayBackMelody
-                                               else if (Just userNote) == currentNote then
-                                                      fromMaybe [] $ Data.Array.tail playBackNotes
-                                                    else
-                                                      playBackNotes
+      currentNote = Data.Array.head state.userMelody
+      newMelody = matchUserInput state.userMelody
+      incIndex = if currentNote == Nothing then
+                   0
+                 else if (Just n) == currentNote then
+                        state.currentPlayBackNoteIndex + 1
+                      else
+                        state.currentPlayBackNoteIndex
+      matchUserInput :: Array MidiNote -> Array MidiNote
+      matchUserInput playBackNotes = if currentNote == Nothing then
+                                       state.currentPlayBackMelody
+                                     else if (Just n) == currentNote then
+                                            fromMaybe [] $ Data.Array.tail playBackNotes
+                                          else
+                                            playBackNotes
+                                              
+update (PianoKeyPressed x y) state    = state { currentUIPianoSelection  = toMidiNote x y
+                                              , currentSelectedNote      = toMidiNote x y }
+update (SetPlayBackNote n) state      = state { currentPlayBackNote      = n }
+update IncrementPlayBackIndex state   = state { currentPlayBackNoteIndex = state.currentPlayBackNoteIndex + 1 }
 
 update ResetMelody state              = state { userMelody = state.userMelody }
 
@@ -143,6 +143,7 @@ init = { currentMidiKeyboardInput : 60
        , userMelody               : []
        , currentUserMelodyHead    : 0
        , currentNoteHelperNote    : 60
+       , userNotes                : []
 
        , midiData                 : []
        , ticks                    : 480.0
@@ -158,7 +159,7 @@ init = { currentMidiKeyboardInput : 60
        , loopButtonPressed        : false }
 
 
--- TODO: FIX: initEvent gives runtime error in JS.
+-- TODO: FIX: initEvent gives runtime error in VexFlow: Voice does not have enough notes.
 initEvent = { vexFlowNotes : [[[{ pitch    : ["c/4"]
                               , duration :  "1"    }]]]
           , vexNotes     : [[[]]]
@@ -323,7 +324,8 @@ view state  = do
                                                    , text $ "        " ++ show state.currentMidiKeyboardInput
                                                    , text $ "        " ++ show state.currentUIPianoSelection
                                                    , text $ "        " ++ show state.currentPlayBackNote
-                                                   , text $ "        " ++ show state.currentPlayBackNoteIndex ]
+                                                   , text $ "        " ++ show state.currentPlayBackNoteIndex
+                                                   , text $ "        " ++ show state.userNotes ]
                              , Pux.div [ style { height     : "20%"
                                                , width      : noteHelperDivSize state.noteHelperActivated ++ "%"
                                                , position   : "absolute"
@@ -410,7 +412,13 @@ octaves :: Octave -> Array Octave
 octaves n = range 1 (round (max (toNumber 1) (abs $ toNumber n)))
                
 drawOctaves :: State -> Array (Html Action)
-drawOctaves state = map (\x -> drawOctave x state.currentPlayBackNote [state.currentMidiKeyboardInput] state.currentSelectedNote) (octaves octaveNumber)
+drawOctaves state = map (\x -> drawOctave x (checkRecordEnabled state) [state.currentMidiKeyboardInput] state.currentSelectedNote) (octaves octaveNumber)
+
+checkRecordEnabled :: State -> MidiNote
+checkRecordEnabled s = if s.recordButtonPressed then
+                         fromMaybe 0 $ Data.Array.head s.userMelody
+                         else
+                         s.currentPlayBackNote
                     
 drawOctave :: Octave  -> MidiNote -> Array MidiNote -> MidiNote -> (Html Action)
 drawOctave oct notePlayed userNote selectedNote = Pux.div [] (drawKeys oct notePlayed userNote selectedNote)
