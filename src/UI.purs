@@ -22,7 +22,7 @@ import Data.Foreign
 import ColorNotation
 import VexMusic
 
-data Action = PlayButtonPressed | PauseButtonPressed | StopButtonPressed | LoopButtonPressed | RecordButtonPressed | MetronomeButtonPressed | NoteHelperResize | IncrementPlayBackIndex | ResetMelody | SetMidiKeyBoardInput MidiNote | PianoKeyPressed Note Octave | SetPlayBackNote MidiNote | SetMidiData (Array MidiNote) | SetMidiEvent (Array Foreign) | SetTicks Number | ResetPlayback | ScoreOkButtonPressed | TempoSliderChanged | NoteButtonPressed
+data Action = PlayButtonPressed | PauseButtonPressed | StopButtonPressed | LoopButtonPressed | RecordButtonPressed | MetronomeButtonPressed | NoteHelperResize | IncrementPlayBackIndex | ResetMelody | SetMidiKeyBoardInput MidiNote | PianoKeyPressed Note Octave | SetPlayBackNote MidiNote | SetMidiData (Array MidiNote) | SetMidiEvent (Array Foreign) | SetTicks Number | ResetPlayback | ScoreOkButtonPressed | TempoSliderChanged | NoteButtonPressed | SettingsButtonPressed
 
 data Note = NoteC | NoteCis | NoteD | NoteDis | NoteE | NoteF | NoteFis | NoteG | NoteGis | NoteA | NoteAis | NoteB
 
@@ -63,6 +63,7 @@ type State = { currentMidiKeyboardInput :: MidiNote
              , metronomeButtonPressed   :: Boolean
              , loopButtonPressed        :: Boolean
              , noteButtonPressed        :: Boolean
+             , settingsButtonPressed        :: Boolean
              , tempoSliderValue         :: Int }
 
 update :: Action -> State -> State
@@ -127,8 +128,9 @@ update RecordButtonPressed state      = state { recordButtonPressed      = not s
                                                                                else
                                                                              0 }
 update MetronomeButtonPressed state   = state { metronomeButtonPressed   = not state.metronomeButtonPressed }
+update SettingsButtonPressed state    = state { settingsButtonPressed    = not state.settingsButtonPressed }
 update ScoreOkButtonPressed state     = state { scoreWindowActivated     = false }
-update TempoSliderChanged state     = state { tempoSliderValue         = state.tempoSliderValue + 1 }
+update TempoSliderChanged state       = state { tempoSliderValue         = state.tempoSliderValue + 1 }
 
 update NoteHelperResize state         = state { noteHelperActivated      = not state.noteHelperActivated }
 
@@ -177,7 +179,8 @@ init = { currentMidiKeyboardInput : 60
        , recordButtonPressed      : false
        , metronomeButtonPressed   : false
        , loopButtonPressed        : false
-       , noteButtonPressed        : true
+       , noteButtonPressed        : false
+       , settingsButtonPressed    : true
        , tempoSliderValue         : 120 }
 
 
@@ -251,7 +254,7 @@ view state  = do
                                                                                                                                          , onClick $ const MetronomeButtonPressed
                                                                                                                                          , style { height     : "100%"
                                                                                                                                                  , width      : "15%"
-                                                                                                                                                 , marginLeft : "10%"
+                                                                                                                                                 , marginRight : "10%"
                                                                                                                                                  , display    : "inline"
                                                                                                                                                  , float      : "left"
                                                                                                                                                  , position   : "relative" } ] [ Pux.img [ src $ metronomeButtonPressed state.metronomeButtonPressed
@@ -262,7 +265,7 @@ view state  = do
                                                                                                                                          , onClick $ const LoopButtonPressed
                                                                                                                                          , style { height     : "100%"
                                                                                                                                                  , width      : "15%"
-                                                                                                                                                 , marginLeft : "10%"
+                                                                                                                                                 , marginRight : "10%"
                                                                                                                                                  , display    : "inline"
                                                                                                                                                  , float      : "left"
                                                                                                                                                  , position   : "relative" } ] [ Pux.img [ src "loop.png"
@@ -273,10 +276,21 @@ view state  = do
                                                                                                                                          , onClick $ const LoopButtonPressed
                                                                                                                                          , style { height     : "100%"
                                                                                                                                                  , width      : "15%"
-                                                                                                                                                 , marginLeft : "10%"
+                                                                                                                                                 , marginRight : "10%"
                                                                                                                                                  , display    : "inline"
                                                                                                                                                  , float      : "left"
                                                                                                                                                  , position   : "relative" } ] [ Pux.img [ src "note.png"
+                                                                                                                                                                                         , style { maxHeight : "100%"
+                                                                                                                                                                                                 , maxWidth  : "100%" 
+                                                                                                                                                                                                 } ] [] ]
+                                                                                                                               , Pux.div [ id_ "Settings_button"
+                                                                                                                                         , onClick $ const SettingsButtonPressed
+                                                                                                                                         , style { height     : "100%"
+                                                                                                                                                 , width      : "15%"
+                                                                                                                                                 , marginRight : "10%"
+                                                                                                                                                 , display    : "inline"
+                                                                                                                                                 , float      : "left"
+                                                                                                                                                 , position   : "relative" } ] [ Pux.img [ src "settingsButton.png"
                                                                                                                                                                                          , style { maxHeight : "100%"
                                                                                                                                                                                                  , maxWidth  : "100%" 
                                                                                                                                                                                                  } ] [] ]] ]
@@ -299,8 +313,6 @@ view state  = do
                                                                                                                                 , Pux.Html.Events.onChange (const TempoSliderChanged)
                                                                                                                                 ] []
                                                                                                       ]
-                                                                          , Pux.Html.Elements.script [] [-- text  "<script>function (){var bpm;sliderTempo = createSlider({slider: document.getElementById('tempo'),min: 10,max: 600,step: 1,message: 'tempo: {value}bpm',onMouseMove: handle,onMouseDown: handle,onMouseUp: process,onMouseMove: handle,onMouseDown: handle,onMouseUp: process});sliderTempo.setValue(120);sliderTempo.setLabel(120);function handle(value){console.log(value);bpm = value;console.log(bpm);sliderTempo.setLabel(value);}function process(){song.setTempo(bpm);}};</script>"
-                                                                                                        ]
                                                                           ]
                              , Pux.div [ id_ "loopWindow"
                                        , style { height     : resizeWindow state.loopButtonPressed
@@ -385,6 +397,83 @@ view state  = do
                                                                                                                                                                                                                       , marginLeft : "39%"
                                                                                                                                                                                                                       , position : "relative"}] [] ]]]
                                ]
+                             , Pux.div [style { height     : resizeWindow' state.settingsButtonPressed 55
+                                              , width      : resizeWindow' state.settingsButtonPressed 55
+                                              , top        : "15%"
+                                              , left       : "22.5%"
+                                              , position   : "absolute"
+                                              , background : "#FFFFFF"
+                                              , border     : "3px solid #DDD"
+                                              , fontSize   : "30px" }] [ Pux.div [ style { height : "33.3%"
+                                                                                         , width  : "100%"
+                                                                                         , background : "white"} ] [ Pux.div [ style { marginTop   : "3.5%"
+                                                                                                                                      , marginLeft  : "30%"
+                                                                                                                                      , height      : "30%"
+                                                                                                                                      , textAlign   : "center"
+                                                                                                                                      , width       : "40%"
+                                                                                                                                      , color       : "#FAFAFA"
+                                                                                                                                      , background  : "#A7C2C2"} ] [ text "LOOP"
+                                                                                                                                                                   , Pux.div [style { height : "50%" }] [ Pux.Html.Elements.input [ type_ "range"
+                                                                                                                                                                                                                                  , id_ "leftLocator"
+                                                                                                                                                                                                                                  , Pux.Html.Attributes.min "0"
+                                                                                                                                                                                                                                  , Pux.Html.Attributes.max "20"
+                                                                                                                                                                                                                                  , Pux.Html.Attributes.step "1"
+                                                                                                                                                                                                                                  , Pux.Html.Attributes.defaultValue "0"
+                                                                                                                                                                                                                                  , Pux.Html.Events.onChange (const TempoSliderChanged)
+                                                                                                                                                                                                                                  ] []]
+                                                                                                                                                                   , Pux.div [style { height : "50%" }] [ Pux.Html.Elements.input [ type_ "range"
+                                                                                                                                                                                                                                , id_ "rightLocator"
+                                                                                                                                                                                                                                , Pux.Html.Attributes.min "0"
+                                                                                                                                                                                                                                , Pux.Html.Attributes.max "20"
+                                                                                                                                                                                                                                , Pux.Html.Attributes.step "1"
+                                                                                                                                                                                                                                , Pux.Html.Attributes.defaultValue "10"
+                                                                                                                                                                                                                                , Pux.Html.Events.onChange (const TempoSliderChanged)
+                                                                                                                                                                                                                                , style { marginTop : "18%"}
+                                                                                                                                                                                                                                ] []
+                                                                                                                                                                                                        ]
+                                                                                                                     ]
+                                                                                                                    , Pux.div [ style { width : "30%"
+                                                                                                                                      , height : "76%"
+                                                                                                                                      , marginLeft : "70%"}] [ Pux.div [style { height : "47%"
+                                                                                                                                                                              , marginTop : "3%"
+                                                                                                                                                                              , marginLeft : "5%"
+                                                                                                                                                                              , width  : "100%"}] [text " START : "]
+                                                                                                                                                             , Pux.div [style { height : "47%"
+                                                                                                                                                                              , marginTop : "2%"
+                                                                                                                                                                              , marginLeft : "5%"
+                                                                                                                                                                              , width  : "100%"}] [text " END   : "]
+                                                                                                                                                             ]
+                                                                                                                    ]
+                                                                       , Pux.div [ style { height : "33.3%"
+                                                                                         , width  : "100%"} ] [ Pux.div [ style { marginTop   : "1.3%"
+                                                                                                                                , marginLeft  : "30%"
+                                                                                                                                , height      : "30%"
+                                                                                                                                , textAlign   : "center"
+                                                                                                                                , width       : "40%"
+                                                                                                                                , color       : "#FAFAFA"
+                                                                                                                                , background  : "#A7C2C2"} ] [ text "METRONOME"
+                                                                                                                                                             , Pux.div [style { height    : "70%"
+                                                                                                                                                                              , marginTop : "5%"
+                                                                                                                                                                              , color  : "#333"}] [ text $ show state.tempoSliderValue ]
+                                                                                                                                                             , Pux.div [style { height : "50%" }] [ Pux.Html.Elements.input [ type_ "range"
+                                                                                                                                                                                                                    , id_ "tempoSlider"
+                                                                                                                                                                                                                    , Pux.Html.Attributes.min "20"
+                                                                                                                                                                                                                    , Pux.Html.Attributes.max "200"
+                                                                                                                                                                                                                    , Pux.Html.Attributes.step "1"
+                                                                                                                                                                                                                    , Pux.Html.Attributes.defaultValue "120"
+                                                                                                                                                                                                                    , Pux.Html.Events.onChange (const TempoSliderChanged)
+                                                                                                                                                                                                                    ] []
+                                                                                                                                                                                          ]]]
+                                                                       , Pux.div [ style { height : "33.3%"
+                                                                                         , width  : "100%"} ] [Pux.div [ style { marginTop   : "1.3%"
+                                                                                                                                      , marginLeft  : "30%"
+                                                                                                                                      , height      : "30%"
+                                                                                                                                      , textAlign   : "center"
+                                                                                                                                      , width       : "40%"
+                                                                                                                                      , color       : "#FAFAFA"
+                                                                                                                                      , background  : "#A7C2C2"} ] [ text "SETTINGS"]]
+                                                                       ]
+                               
                              ]
                              
                              

@@ -66,6 +66,7 @@ main state = do
   endOfTrackChannel <- channel false
   let endOfTrackSignal :: Signal Action
       endOfTrackSignal = subscribe endOfTrackChannel ~> resetPlayback
+      
   
   app <- start
     { initialState: state

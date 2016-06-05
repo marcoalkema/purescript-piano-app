@@ -136,7 +136,7 @@ module.exports = {
 
 					   var canvas = document.getElementById("notationCanvas");
 					   console.log(canvas);
-					   canvas.addEventListener("onchange", function(event){
+					   canvas.addEventListener("input", function(event){
 					       console.log("HOIHOIHOI");
 					   });
 
