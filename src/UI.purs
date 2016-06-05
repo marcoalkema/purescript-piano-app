@@ -397,10 +397,13 @@ view state  = do
                                                                                                                                                                                                                       , marginLeft : "39%"
                                                                                                                                                                                                                       , position : "relative"}] [] ]]]
                                ]
-                             , Pux.div [style { height     : resizeWindow' state.settingsButtonPressed 55
-                                              , width      : resizeWindow' state.settingsButtonPressed 55
+                             , Pux.div [style { height     : "55%"
+                                              , width      : "55%"
                                               , top        : "15%"
-                                              , left       : "22.5%"
+                                              , left       : if state.settingsButtonPressed then
+                                                               "100%"
+                                                               else
+                                                               "22.5%"
                                               , position   : "absolute"
                                               , background : "#FFFFFF"
                                               , border     : "3px solid #DDD"
