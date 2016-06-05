@@ -22,7 +22,7 @@ import Data.Foreign
 import ColorNotation
 import VexMusic
 
-data Action = PlayButtonPressed | PauseButtonPressed | StopButtonPressed | LoopButtonPressed | RecordButtonPressed | MetronomeButtonPressed | NoteHelperResize | IncrementPlayBackIndex | ResetMelody | SetMidiKeyBoardInput MidiNote | PianoKeyPressed Note Octave | SetPlayBackNote MidiNote | SetMidiData (Array MidiNote) | SetMidiEvent (Array Foreign) | SetTicks Number | ResetPlayback | ScoreOkButtonPressed
+data Action = PlayButtonPressed | PauseButtonPressed | StopButtonPressed | LoopButtonPressed | RecordButtonPressed | MetronomeButtonPressed | NoteHelperResize | IncrementPlayBackIndex | ResetMelody | SetMidiKeyBoardInput MidiNote | PianoKeyPressed Note Octave | SetPlayBackNote MidiNote | SetMidiData (Array MidiNote) | SetMidiEvent (Array Foreign) | SetTicks Number | ResetPlayback | ScoreOkButtonPressed | TempoSliderChanged | NoteButtonPressed
 
 data Note = NoteC | NoteCis | NoteD | NoteDis | NoteE | NoteF | NoteFis | NoteG | NoteGis | NoteA | NoteAis | NoteB
 
@@ -61,7 +61,9 @@ type State = { currentMidiKeyboardInput :: MidiNote
              , stopButtonPressed        :: Boolean
              , recordButtonPressed      :: Boolean
              , metronomeButtonPressed   :: Boolean
-             , loopButtonPressed        :: Boolean }
+             , loopButtonPressed        :: Boolean
+             , noteButtonPressed        :: Boolean
+             , tempoSliderValue         :: Int }
 
 update :: Action -> State -> State
 
@@ -116,7 +118,8 @@ update StopButtonPressed state        = state { stopButtonPressed        = not s
                                               , recordButtonPressed      = false
                                               , playButtonPressed        = false }
 update PauseButtonPressed state       = state { pauseButtonPressed       = not state.pauseButtonPressed }
-update LoopButtonPressed state        = state { metronomeButtonPressed   = not state.metronomeButtonPressed  }
+update LoopButtonPressed state        = state { loopButtonPressed        = not state.loopButtonPressed  }
+update NoteButtonPressed state        = state { noteButtonPressed        = not state.noteButtonPressed  }
 update RecordButtonPressed state      = state { recordButtonPressed      = not state.recordButtonPressed
                                               , userMelody               = state.currentPlayBackMelody
                                               , currentPlayBackNoteIndex = if state.recordButtonPressed then
@@ -125,6 +128,7 @@ update RecordButtonPressed state      = state { recordButtonPressed      = not s
                                                                              0 }
 update MetronomeButtonPressed state   = state { metronomeButtonPressed   = not state.metronomeButtonPressed }
 update ScoreOkButtonPressed state     = state { scoreWindowActivated     = false }
+update TempoSliderChanged state     = state { tempoSliderValue         = state.tempoSliderValue + 1 }
 
 update NoteHelperResize state         = state { noteHelperActivated      = not state.noteHelperActivated }
 
@@ -172,7 +176,9 @@ init = { currentMidiKeyboardInput : 60
        , stopButtonPressed        : false
        , recordButtonPressed      : false
        , metronomeButtonPressed   : false
-       , loopButtonPressed        : false }
+       , loopButtonPressed        : false
+       , noteButtonPressed        : true
+       , tempoSliderValue         : 120 }
 
 
 -- TODO: FIX: initEvent gives runtime error in VexFlow: Voice does not have enough notes.
@@ -282,17 +288,19 @@ view state  = do
                                                , background : "#DDDDDD"
                                                -- , border     : "2px solid #ddd"
                                                , top        : "11%"
-                                               , overflow   : "scroll" }] [Pux.Html.Elements.label [] [ Pux.div [] [text "tempo: 120bpm"]
+                                               , overflow   : "scroll" }] [Pux.Html.Elements.label [] [ Pux.div [style { height : "80%"
+                                                                                                                       , width  : "20%"}] [text "tempo: 120bpm"]
                                                                                                       , Pux.Html.Elements.input [ type_ "range"
-                                                                                                                                , id_ "tempo"
-                                                                                                                                , Pux.Html.Attributes.min "0"
-                                                                                                                                , Pux.Html.Attributes.max "1"
-                                                                                                                                , Pux.Html.Attributes.step "0.01"
-                                                                                                                                , Pux.Html.Attributes.defaultValue "0"
-                                                                                                                                -- , Pux.Html.Events.onChange 
+                                                                                                                                , id_ "tempoSlider"
+                                                                                                                                , Pux.Html.Attributes.min "20"
+                                                                                                                                , Pux.Html.Attributes.max "200"
+                                                                                                                                , Pux.Html.Attributes.step "1"
+                                                                                                                                , Pux.Html.Attributes.defaultValue "120"
+                                                                                                                                , Pux.Html.Events.onChange (const TempoSliderChanged)
                                                                                                                                 ] []
                                                                                                       ]
-                                                                          , Pux.Html.Elements.script [] [text  "<script>function (){var bpm;sliderTempo = createSlider({slider: document.getElementById('tempo'),min: 10,max: 600,step: 1,message: 'tempo: {value}bpm',onMouseMove: handle,onMouseDown: handle,onMouseUp: process,onMouseMove: handle,onMouseDown: handle,onMouseUp: process});sliderTempo.setValue(120);sliderTempo.setLabel(120);function handle(value){bpm = value;console.log(bpm);sliderTempo.setLabel(value);}function process(){song.setTempo(bpm);}};</script>"]
+                                                                          , Pux.Html.Elements.script [] [-- text  "<script>function (){var bpm;sliderTempo = createSlider({slider: document.getElementById('tempo'),min: 10,max: 600,step: 1,message: 'tempo: {value}bpm',onMouseMove: handle,onMouseDown: handle,onMouseUp: process,onMouseMove: handle,onMouseDown: handle,onMouseUp: process});sliderTempo.setValue(120);sliderTempo.setLabel(120);function handle(value){console.log(value);bpm = value;console.log(bpm);sliderTempo.setLabel(value);}function process(){song.setTempo(bpm);}};</script>"
+                                                                                                        ]
                                                                           ]
                              , Pux.div [ id_ "loopWindow"
                                        , style { height     : resizeWindow state.loopButtonPressed
@@ -332,6 +340,7 @@ view state  = do
                                                    , text $ "        " ++ show state.currentPlayBackNote
                                                    , text $ "        " ++ show state.currentPlayBackNoteIndex
                                                    , text $ "        " ++ show state.lastNote
+                                                   , text $ "        " ++ show state.tempoSliderValue
                                                    , text $ "        " ++ show state.userNotes ]
                              , Pux.div [ style { height     : "20%"
                                                , width      : noteHelperDivSize state.noteHelperActivated ++ "%"

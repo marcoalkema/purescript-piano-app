@@ -26,7 +26,9 @@ module.exports = {
 					   var btnRecord    = document.getElementById('Record_button');
 					   var btnMetronome = document.getElementById('Metronome');
 					   var btnLoop      = document.getElementById('Loop_button');
-					   var foo          = document.getElementById('notationCanvas');
+					   var sliderBtn    = document.getElementById('tempoSlider');
+
+					   
 					   
 					   var midiFile = window.sequencer.getMidiFile(file.split('.mid').join(''));
 					   var song = window.sequencer.createSong(midiFile);
@@ -128,8 +130,8 @@ module.exports = {
 			    		       song.stop();
 					   });
 
-					   foo.addEventListener('oninput', function(event){
-					       console.log(event);
+					   sliderBtn.addEventListener('input', function(foo){
+					       console.log(Number(foo.srcElement.value));
 					   });
 
 					   var canvas = document.getElementById("notationCanvas");
