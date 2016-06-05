@@ -8,36 +8,41 @@ module.exports = {
 	return function(send1){
 	    return function(send2){
 		return function(send3){
-		    return function(){
-						
-			var sequencer = window.sequencer;
-			
-			sequencer.ready(function(){
-			    
-			    sequencer.addAssetPack({url: 'http://abumarkub.net/heartbeatjs/assets/asset_pack_basic.json'},
-
-				   (function init(){
+		    return function(send4){
+			return function(send5){
+			    return function(send6){
+				return function(){
+				    
+				    var sequencer = window.sequencer;
+				    
+				    sequencer.ready(function(){
+					
+					sequencer.addAssetPack({url: 'http://abumarkub.net/heartbeatjs/assets/asset_pack_basic.json'},
+							       
+							       (function init(){
 				       
 				       sequencer.addMidiFile({url: file}, function() {
 					   
-					   var btnPlay      = document.getElementById('Play_button');
-					   var btnPause     = document.getElementById('Pause_button');
-					   var btnStop      = document.getElementById('Stop_button');
-					   var btnRecord    = document.getElementById('Record_button');
-					   var btnMetronome = document.getElementById('Metronome');
-					   var btnLoop      = document.getElementById('Loop_button');
-					   var sliderBtn    = document.getElementById('tempoSlider');
+					   var btnPlay			= document.getElementById('Play_button');
+					   var btnPause			= document.getElementById('Pause_button');
+					   var btnStop			= document.getElementById('Stop_button');
+					   var btnRecord		= document.getElementById('Record_button');
+					   var btnMetronome		= document.getElementById('Metronome');
+					   var btnLoop			= document.getElementById('Loop_button');
+					   var metronomeSlider		= document.getElementById('metronomeSlider');
+					   var leftLocatorSlider	= document.getElementById('leftLocator');
+					   var rightLocatorSlider	= document.getElementById('rightLocator');
 
 					   
 					   
-					   var midiFile = window.sequencer.getMidiFile(file.split('.mid').join(''));
-					   var song = window.sequencer.createSong(midiFile);
+					   var midiFile			= window.sequencer.getMidiFile(file.split('.mid').join(''));
+					   var song			= window.sequencer.createSong(midiFile);
 
-					   var piano = sequencer.createInstrument('piano');
+					   var piano			= sequencer.createInstrument('piano');
 
-					   var setRecord    = false;
-					   var setMetronome = false;
-					   var setLoop      = false;
+					   var setRecord		= false;
+					   var setMetronome		= false;
+					   var setLoop			= false;
 
 					   // Create handlers for UI Piano buttons
 					   var keys = {};							   
@@ -61,6 +66,10 @@ module.exports = {
 					   track.monitor = true;
 					   track.setMidiInput('all');
 					   track.setInstrument('piano');
+
+					   var reverb = sequencer.createReverb('simple_ir');
+					   track.addEffect(reverb);
+					   reverb.setAmount(0.4);
 
 					   var track2 = sequencer.createTrack();
 					   track2.monitor = true;
@@ -130,8 +139,10 @@ module.exports = {
 			    		       song.stop();
 					   });
 
-					   sliderBtn.addEventListener('input', function(foo){
-					       console.log(Number(foo.srcElement.value));
+					   metronomeSlider.addEventListener('input', function(event){
+					       var bpm = event.srcElement.value;
+					       song.setTempo(bpm);
+					       send4(Number(bpm))();
 					   });
 
 					   var canvas = document.getElementById("notationCanvas");
@@ -148,7 +159,7 @@ module.exports = {
 						   song.useMetronome = true;
 						   song.setLoop();
 						   song.setLeftLocator('barsbeats', 1,1,1,0);
-						   song.setRightLocator('barsbeats', 2,1,1,0);
+						   song.setRightLocator('barsbeats', 10,1,1,0);
 						   song.update();
 						   song.play();
 					       }
@@ -172,12 +183,35 @@ module.exports = {
 
 					   btnLoop.addEventListener('click', function(){
 					       setLoop = !setLoop;
+					       if (setLoop == true){
+						   song.setLoop(true);
+					       }
+					       else if (setLoop == false){
+						   song.setLoop(false);
+					       }
+					   });
+
+					   leftLocatorSlider.addEventListener('input', function(event){
+					       var loopStart = Number(event.srcElement.value);
+					       song.setLeftLocator('barsbeats', loopStart + 1,1,1,0);
+					       song.update();
+					       send5(loopStart)();
+					   });
+					   
+					   rightLocatorSlider.addEventListener('input', function(event){
+					       var loopEnd = Number(event.srcElement.value);
+					       song.setRightLocator('barsbeats', loopEnd + 1,1,1,0);
+					       song.update();
+					       send6(loopEnd)();
 					   });
 					   
 				       });
-				   })
-						  );
-			});
+							       })
+							      );
+				    });
+				};
+			    };
+			};
 		    };
 		};
 	    };

@@ -11,4 +11,4 @@ import Control.Monad.Eff.Exception
 foreign import data HEARTBEAT       :: !
 foreign import data HeartBeat       :: *
 
-foreign import loadHeartBeat :: forall e. String -> (Int -> Eff (channel :: CHANNEL, heartbeat :: HEARTBEAT | e ) Unit) -> (Int -> Eff (channel :: CHANNEL, heartbeat :: HEARTBEAT | e ) Unit) ->  (Boolean -> Eff (channel :: CHANNEL, heartbeat :: HEARTBEAT | e ) Unit) -> Eff ( channel :: CHANNEL, heartbeat :: HEARTBEAT | e ) HeartBeat
+foreign import loadHeartBeat :: forall e. String -> (Int -> Eff (channel :: CHANNEL, heartbeat :: HEARTBEAT | e ) Unit) -> (Int -> Eff (channel :: CHANNEL, heartbeat :: HEARTBEAT | e ) Unit) -> (Boolean -> Eff (channel :: CHANNEL, heartbeat :: HEARTBEAT | e ) Unit) -> (Int -> Eff (channel :: CHANNEL, heartbeat :: HEARTBEAT | e ) Unit) -> (Int -> Eff (channel :: CHANNEL, heartbeat :: HEARTBEAT | e ) Unit) -> (Int -> Eff (channel :: CHANNEL, heartbeat :: HEARTBEAT | e ) Unit) -> Eff ( channel :: CHANNEL, heartbeat :: HEARTBEAT | e ) HeartBeat

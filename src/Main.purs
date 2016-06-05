@@ -66,19 +66,31 @@ main state = do
   endOfTrackChannel <- channel false
   let endOfTrackSignal :: Signal Action
       endOfTrackSignal = subscribe endOfTrackChannel ~> resetPlayback
+
+  metronomeChannel <- channel 120
+  let metronomeSignal :: Signal Action
+      metronomeSignal = subscribe metronomeChannel ~> setMetronome
+
+  leftLocatorChannel <- channel 1
+  let leftLocatorSignal :: Signal Action
+      leftLocatorSignal = subscribe leftLocatorChannel ~> setLeftLocator
+
+  rightLocatorChannel <- channel 1
+  let rightLocatorSignal :: Signal Action
+      rightLocatorSignal = subscribe rightLocatorChannel ~> setRightLocator
       
   
   app <- start
     { initialState: state
     , update: fromSimple update
     , view: view
-    , inputs: [fromMaybe routeSignal $ mergeMany [routeSignal, playBackSignal, incrementPlayBackSignal, keyboardInputSignal, processedMidiSignal, midiEventSignal, ticksSignal, endOfTrackSignal]]
+    , inputs: [fromMaybe routeSignal $ mergeMany [routeSignal, playBackSignal, incrementPlayBackSignal, keyboardInputSignal, processedMidiSignal, midiEventSignal, ticksSignal, endOfTrackSignal, metronomeSignal, leftLocatorSignal, rightLocatorSignal]]
     }
 
   renderToDOM "#app" app.html
 
   runSignal (app.state ~> \state -> drawNoteHelper (getAppFunctionality state)  state.ui.currentMidiKeyboardInput)
-  loadHeartBeat midiFile (send playBackChannel) (send userChannel) (send endOfTrackChannel)
+  loadHeartBeat midiFile (send playBackChannel) (send userChannel) (send endOfTrackChannel) (send metronomeChannel) (send leftLocatorChannel) (send rightLocatorChannel)
   runSignal (app.state ~> \state -> draw state.ui.currentPlayBackNoteIndex state.ui.midiEvents state.ui.colorNotation)
   
   return app
@@ -154,4 +166,13 @@ setMidiEvent :: Array Foreign -> App.Layout.Action
 setMidiEvent = Child <<< UI.SetMidiEvent
 
 resetPlayback :: Boolean -> App.Layout.Action
-resetPlayback _ = Child (UI.ResetPlayback)
+resetPlayback _ = Child UI.ResetPlayback
+
+setMetronome :: Int -> App.Layout.Action
+setMetronome = Child <<< UI.TempoSliderChanged
+
+setLeftLocator :: Int -> App.Layout.Action
+setLeftLocator = Child <<< UI.SetLeftLocatorSlider
+
+setRightLocator :: Int -> App.Layout.Action
+setRightLocator = Child <<< UI.SetRightLocatorSlider
