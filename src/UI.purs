@@ -119,7 +119,7 @@ update PlayButtonPressed state        = state { playButtonPressed        = not s
 update StopButtonPressed state        = state { stopButtonPressed        = not state.playButtonPressed
                                               , currentPlayBackNoteIndex = -1
                                               , recordButtonPressed      = false
-                                              , playButtonPressed        = false }
+                                              , playButtonPressed        = true }
 update PauseButtonPressed state       = state { pauseButtonPressed       = not state.pauseButtonPressed }
 update LoopButtonPressed state        = state { loopButtonPressed        = not state.loopButtonPressed  }
 update NoteButtonPressed state        = state { noteButtonPressed        = not state.noteButtonPressed  }
@@ -128,7 +128,8 @@ update RecordButtonPressed state      = state { recordButtonPressed      = not s
                                               , currentPlayBackNoteIndex = if state.recordButtonPressed then
                                                                              -1
                                                                                else
-                                                                             0 }
+                                                                             0
+                                              , playButtonPressed        = true }
 update MetronomeButtonPressed state   = state { metronomeButtonPressed   = not state.metronomeButtonPressed }
 update SettingsButtonPressed state    = state { settingsButtonPressed    = not state.settingsButtonPressed }
 update ScoreOkButtonPressed state     = state { scoreWindowActivated     = false }
@@ -177,7 +178,7 @@ init = { currentMidiKeyboardInput : 60
        , scoreWindowActivated     : false
          
        , noteHelperActivated      : false
-       , playButtonPressed        : false
+       , playButtonPressed        : true
        , pauseButtonPressed       : false
        , stopButtonPressed        : false
        , recordButtonPressed      : false
@@ -473,7 +474,10 @@ buttons state = [ Pux.div [ id_ "Play_button"
                                   , marginLeft : "10%"
                                   , display    : "inline"
                                   , float      : "left"
-                                  , position   : "relative" } ] [ Pux.img [ src "play.png"
+                                  , position   : "relative" } ] [ Pux.img [ src if state.playButtonPressed then
+                                                                                  "playButton.png"
+                                                                                else
+                                                                                  "playButtonPressed.png"
                                                                           , style { maxHeight : "100%"
                                                                                   , maxWidth  : "100%" 
                                                                                   } ] [] ]
@@ -507,9 +511,9 @@ metronomeButtonPressed b = if b then
                              "metronome.png"
 
 recordButtonPressed b = if b then
-                             "recordPressed.png"
+                             "recordButtonPressed.png"
                            else
-                             "record.png"
+                             "recordButton.png"
 
 resizeWindow b = if b then
                    "5%"
