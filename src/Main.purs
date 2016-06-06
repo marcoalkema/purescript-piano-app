@@ -78,8 +78,11 @@ main state = do
   rightLocatorChannel <- channel 1
   let rightLocatorSignal :: Signal Action
       rightLocatorSignal = subscribe rightLocatorChannel ~> setRightLocator
-      
-  
+
+  recordNotePlaybackChannel <- channel 0
+  -- let recordNotePlaybackSignal :: forall a b. a -> Signal b
+  let recordNotePlaybackSignal = (~>) (dropRepeats $ subscribe recordNotePlaybackChannel)
+
   app <- start
     { initialState: state
     , update: fromSimple update
@@ -88,11 +91,13 @@ main state = do
     }
 
   renderToDOM "#app" app.html
-
-  runSignal (app.state ~> \state -> drawNoteHelper (getAppFunctionality state)  state.ui.currentMidiKeyboardInput)
-  loadHeartBeat midiFile (send playBackChannel) (send userChannel) (send endOfTrackChannel) (send metronomeChannel) (send leftLocatorChannel) (send rightLocatorChannel)
-  runSignal (app.state ~> \state -> draw state.ui.currentPlayBackNoteIndex state.ui.midiEvents state.ui.colorNotation)
   
+  runSignal (app.state ~> \state -> send recordNotePlaybackChannel <<< fromMaybe 0 $ Data.Array.index state.ui.userMelody state.ui.currentPlayBackNoteIndex)
+  runSignal (app.state ~> \state -> drawNoteHelper (getAppFunctionality state)  state.ui.currentMidiKeyboardInput)
+  loadHeartBeat midiFile (send playBackChannel) (send userChannel) (send endOfTrackChannel) (send metronomeChannel) (send leftLocatorChannel) (send rightLocatorChannel) recordNotePlaybackSignal
+  runSignal (app.state ~> \state -> draw state.ui.currentPlayBackNoteIndex state.ui.midiEvents state.ui.colorNotation)
+  runSignal (app.state ~> \state -> logger state.ui.loopButtonPressed)
+  runSignal (app.state ~> \state -> logger state.ui.settingsButtonPressed)
   return app
 
 getAppFunctionality :: State -> Int

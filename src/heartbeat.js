@@ -11,6 +11,7 @@ module.exports = {
 		    return function(send4){
 			return function(send5){
 			    return function(send6){
+				return function(channel){
 				return function(){
 				    
 				    var sequencer = window.sequencer;
@@ -78,18 +79,37 @@ module.exports = {
 					   track.movePart(song.tracks[0].parts[0], 960 * 4);
 					   song.update();
 
+					   // PureScript Channel for MidiNote signal
+					   channel(function(noteNumber){
+					       if (setRecord){
+						   console.log(noteNumber);
+
+						   var events = sequencer.util.getRandomNotes({
+						       minNoteNumber: 60,
+						       maxNoteNumber: 60,
+						       minVelocity: 100,
+						       maxVelocity: 100,
+						       noteDuration: 1000, //ticks
+						       numNotes: 1
+						   });
+
+						   sequencer.processEvents(events, 120);
+						   // track2.processMidiEvent(sequencer.createMidiEvent(500, sequencer.NOTE_ON, 60, 100));
+						   // track2.processMidiEvent(sequencer.createMidiEvent(3000, sequencer.NOTE_OFF, 60));
+					       }
+					   });
 					   
 					   function updateOnScreenKeyboard(event){
 					       send2(event.data1)();
 					   }
 							   
 					   function startNote(){
-					       var noteNumber = sequencer.getNoteNumber(Number((this.id).split('pianoKey').join('')));
+					       var noteNumber = sequencer.getNoteNumber(Number((this.id).split('pianoKey').join('')) + 12);
 					       track.processMidiEvent(sequencer.createMidiEvent(0, sequencer.NOTE_ON, noteNumber, 100));
 					   }
 					   
 					   function stopNote(){
-					       var noteNumber = sequencer.getNoteNumber(Number((this.id).split('pianoKey').join('')));
+					       var noteNumber = sequencer.getNoteNumber(Number((this.id).split('pianoKey').join('')) + 12);
 					       track.processMidiEvent(sequencer.createMidiEvent(0, sequencer.NOTE_OFF, noteNumber));
 							   }
 					   
@@ -143,12 +163,6 @@ module.exports = {
 					       var bpm = event.srcElement.value;
 					       song.setTempo(bpm);
 					       send4(Number(bpm))();
-					   });
-
-					   var canvas = document.getElementById("notationCanvas");
-					   console.log(canvas);
-					   canvas.addEventListener("input", function(event){
-					       console.log("HOIHOIHOI");
 					   });
 
 					   btnRecord.addEventListener('click', function(){
@@ -209,6 +223,7 @@ module.exports = {
 							       })
 							      );
 				    });
+				};
 				};
 			    };
 			};

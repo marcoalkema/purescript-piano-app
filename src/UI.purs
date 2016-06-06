@@ -32,7 +32,7 @@ type CurrentPlayBackNote = MidiNote
 type CurrentUserNote     = MidiNote
 
 
--- TODO: Separate states for ddifferent domains --> Create new / domain-specific states!!!
+-- TODO: Separate states for different domains --> Create new / domain-specific states!!!
 --SEPARATION OF CONCERNS!!!
 type State = { currentMidiKeyboardInput :: MidiNote
              , currentUIPianoSelection  :: MidiNote
@@ -109,8 +109,8 @@ update (SetMidiKeyBoardInput n) state = state { currentMidiKeyboardInput = n
                                             playBackNotes
                                               
 update (PianoKeyPressed x y) state    = state { currentUIPianoSelection  = toMidiNote x y
-                                              , currentSelectedNote      = toMidiNote x y }
-update (SetPlayBackNote n) state      = state { currentPlayBackNote      = n }
+                                              , currentSelectedNote      = (toMidiNote x y)}
+update (SetPlayBackNote n) state      = state { currentPlayBackNote      = n}
 update IncrementPlayBackIndex state   = state { currentPlayBackNoteIndex = state.currentPlayBackNoteIndex + 1 }
 
 update ResetMelody state              = state { userMelody = state.userMelody }
@@ -182,7 +182,7 @@ init = { currentMidiKeyboardInput : 60
        , stopButtonPressed        : false
        , recordButtonPressed      : false
        , metronomeButtonPressed   : false
-       , loopButtonPressed        : false
+       , loopButtonPressed        : true
        , noteButtonPressed        : false
        , settingsButtonPressed    : true
          
@@ -275,12 +275,15 @@ view state  = do
                                                                                                                                                  , marginRight : "10%"
                                                                                                                                                  , display    : "inline"
                                                                                                                                                  , float      : "left"
-                                                                                                                                                 , position   : "relative" } ] [ Pux.img [ src "loop.png"
+                                                                                                                                                 , position   : "relative" } ] [ Pux.img [ src if state.loopButtonPressed then
+                                                                                                                                                                                                 "loopButton.png"
+                                                                                                                                                                                                 else
+                                                                                                                                                                                                 "loopButtonPressed.png"                                                                                                                                                                       
                                                                                                                                                                                          , style { maxHeight : "100%"
                                                                                                                                                                                                  , maxWidth  : "100%" 
                                                                                                                                                                                                  } ] [] ]
                                                                                                                                , Pux.div [ id_ "Note_button"
-                                                                                                                                         , onClick $ const LoopButtonPressed
+                                                                                                                                         -- , onClick $ const NoteButtonPressed
                                                                                                                                          , style { height     : "100%"
                                                                                                                                                  , width      : "15%"
                                                                                                                                                  , marginRight : "10%"
@@ -297,18 +300,13 @@ view state  = do
                                                                                                                                                  , marginRight : "10%"
                                                                                                                                                  , display    : "inline"
                                                                                                                                                  , float      : "left"
-                                                                                                                                                 , position   : "relative" } ] [ Pux.img [ src "settingsButton.png"
+                                                                                                                                                 , position   : "relative" } ] [ Pux.img [ src if state.settingsButtonPressed then
+                                                                                                                                                                                                 "settingsButton.png"
+                                                                                                                                                                                                 else
+                                                                                                                                                                                                 "settingsButtonPressed.png"
                                                                                                                                                                                          , style { maxHeight : "100%"
                                                                                                                                                                                                  , maxWidth  : "100%" 
                                                                                                                                                                                                  } ] [] ]] ]
-                             , Pux.div [ id_ "loopWindow"
-                                       , style { height     : resizeWindow state.loopButtonPressed
-                                               , width      : "100%"
-                                               , position   : "absolute"
-                                               , left       : "0%"
-                                               , background : "#DDDDDD"
-                                               , top        : "11%"
-                                               , overflow   : "scroll" }] [] 
                              , Pux.div [ id_ "fooBar"
                                        , style { height     : "1%"
                                                , width      : "100%"
@@ -326,7 +324,7 @@ view state  = do
                                                                                            , marginLeft : "1.4%"
                                                                                            , marginRight : "1%" }
                                                                                    , height "1000%"
-                                                                                   , width "1240%" ] [text "HOI"] ]
+                                                                                   , width "1240%" ] [] ]
                              , Pux.div [ style { height     : "6%"
                                                , width      : "100%"
                                                , background : "#F4F4F4"
@@ -387,10 +385,10 @@ view state  = do
                              , Pux.div [style { height     : "55%"
                                               , width      : "55%"
                                               , top        : "15%"
-                                              , left       : if state.settingsButtonPressed then
+                                              , left       : (if state.settingsButtonPressed then
                                                                "100%"
                                                                else
-                                                               "22.5%"
+                                                               "22.5%")
                                               , position   : "absolute"
                                               , background : "#FFFFFF"
                                               , border     : "3px solid #DDD"
@@ -402,7 +400,7 @@ view state  = do
                                                                                                                                       , textAlign   : "center"
                                                                                                                                       , width       : "40%"
                                                                                                                                       , color       : "#FAFAFA"
-                                                                                                                                      , background  : "#A7C2C2"} ] [ text "LOOP"
+                                                                                                                                      , background  : "#679292"} ] [ text "LOOP"
                                                                                                                                                                    , Pux.div [style { height : "50%" }] [ Pux.Html.Elements.input [ type_ "range"
                                                                                                                                                                                                                                   , id_ "leftLocator"
                                                                                                                                                                                                                                   , Pux.Html.Attributes.min "1"
@@ -440,7 +438,7 @@ view state  = do
                                                                                                                                 , textAlign   : "center"
                                                                                                                                 , width       : "40%"
                                                                                                                                 , color       : "#FAFAFA"
-                                                                                                                                , background  : "#A7C2C2"} ] [ text "METRONOME"
+                                                                                                                                , background  : "#679292"} ] [ text "METRONOME"
                                                                                                                                                              , Pux.div [style { height    : "70%"
                                                                                                                                                                               , marginTop : "5%"
                                                                                                                                                                               , color  : "#333"}] [ text $ show state.tempoSliderValue ]
@@ -460,7 +458,7 @@ view state  = do
                                                                                                                                       , textAlign   : "center"
                                                                                                                                       , width       : "40%"
                                                                                                                                       , color       : "#FAFAFA"
-                                                                                                                                      , background  : "#A7C2C2"} ] [ text "SETTINGS"]]
+                                                                                                                                      , background  : "#679292"} ] [ text "SETTINGS"]]
                                                                        ]
                                
                              ]
@@ -586,8 +584,8 @@ keyShadow posRec oct = if mod (toMidiNote posRec.note oct) 12 == 11 || mod (toMi
 
 keyStatus :: PosRec -> Octave -> MidiNote -> Array MidiNote -> MidiNote -> String
 keyStatus posRec octave notesPlayed userNotes selectedNote = if (toMidiNote posRec.note octave) == selectedNote then "Key_selected"
-                                                             else if toMidiNote posRec.note octave == notesPlayed then "Key_red"
-                                                             else if hasMidiNote (toMidiNote posRec.note octave) userNotes then "Key_grey"
+                                                             else if toMidiNote posRec.note octave == notesPlayed - 12 then "Key_red"
+                                                             -- else if hasMidiNote (toMidiNote posRec.note octave) userNotes then "Key_grey"
                                                              else "Key"
 
 styles :: PosRec -> Octave -> MidiNote -> Array MidiNote -> Attribute Action
