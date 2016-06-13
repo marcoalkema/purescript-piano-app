@@ -15,11 +15,9 @@ foreign import data HeartBeat       :: *
 
 foreign import loadHeartBeat :: forall a e. String -> (Int -> Eff (channel :: CHANNEL, heartbeat :: HEARTBEAT | e ) Unit) -> (Int -> Eff (channel :: CHANNEL, heartbeat :: HEARTBEAT | e ) Unit) -> (Boolean -> Eff (channel :: CHANNEL, heartbeat :: HEARTBEAT | e ) Unit) -> (Int -> Eff (channel :: CHANNEL, heartbeat :: HEARTBEAT | e ) Unit) -> (Int -> Eff (channel :: CHANNEL, heartbeat :: HEARTBEAT | e ) Unit) -> (Int -> Eff (channel :: CHANNEL, heartbeat :: HEARTBEAT | e ) Unit) -> a -> Eff ( channel :: CHANNEL, heartbeat :: HEARTBEAT | e ) HeartBeat
 
-
-
--- type MetronomeSignal = forall e. (Int -> Eff (channel :: CHANNEL, heartbeat :: HEARTBEAT | e ) Unit)
--- type LeftLocatorSignal = forall e. (Int -> Eff (channel :: CHANNEL, heartbeat :: HEARTBEAT | e ) Unit)
--- type RightLocatorSignal = forall e. (Int -> Eff (channel :: CHANNEL, heartbeat :: HEARTBEAT | e ) Unit)
--- type MidiTrackSignal = forall e. (Int -> Eff (channel :: CHANNEL, heartbeat :: HEARTBEAT | e ) Unit)
--- type UserKeyboardSignal = forall e. (Int -> Eff (channel :: CHANNEL, heartbeat :: HEARTBEAT | e ) Unit)
--- type EndOfTrackSignal = forall e. (Boolean -> Eff (channel :: CHANNEL, heartbeat :: HEARTBEAT | e ) Unit) 
+type MetronomeSignal    = forall e. (Int -> Eff (channel :: CHANNEL, heartbeat :: HEARTBEAT | e ) Unit)
+type LeftLocatorSignal  = forall e. (Int -> Eff (channel :: CHANNEL, heartbeat :: HEARTBEAT | e ) Unit)
+type RightLocatorSignal = forall e. (Int -> Eff (channel :: CHANNEL, heartbeat :: HEARTBEAT | e ) Unit)
+type MidiTrackSignal    = forall e. (Int -> Eff (channel :: CHANNEL, heartbeat :: HEARTBEAT | e ) Unit)
+type UserKeyboardSignal = forall e. (Int -> Eff (channel :: CHANNEL, heartbeat :: HEARTBEAT | e ) Unit)
+type EndOfTrackSignal   = forall e. (Boolean -> Eff (channel :: CHANNEL, heartbeat :: HEARTBEAT | e ) Unit) 

@@ -556,9 +556,6 @@ noteHelperDivSize isActivated = if isActivated then "20" else "1"
 octaveNumber :: Int
 octaveNumber = 6
 
--- octaves :: Octave -> Array Octave
--- octaves n = range 1 (round (max (toNumber 1) (abs $ toNumber n)))
-
 octaves :: Octave -> Array Octave
 octaves = range 1 <<< round <<< max 1.0 <<< abs <<< toNumber
                

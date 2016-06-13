@@ -18,19 +18,19 @@ hasColorInit = { acc         : 0
                , barHasColor : [] }
 
 setHasColor :: Index -> NotationHasColor -> NotationHasColor
-setHasColor i xs = getHasColorFromRecord $ setBoolean i xs
+setHasColor i = getHasColorFromRecord <<< setBoolean i
 
 getHasColorFromRecord :: Array HasColor -> NotationHasColor
-getHasColorFromRecord xs = map (_.barHasColor) $ getTail xs
+getHasColorFromRecord = map (_.barHasColor) <<< getTail 
 
 setBoolean :: Index -> NotationHasColor -> Array HasColor
-setBoolean i xs = foldl (\b x -> Data.Array.snoc b $ compareToIndex i ((getAcc b).acc) x) [hasColorInit] xs
+setBoolean i = foldl (\b x -> snoc b $ compareToIndex i ((getAcc b).acc) x) [hasColorInit]
 
 getTail :: Array HasColor -> Array HasColor
-getTail xs = fromMaybe [] $ Data.Array.tail xs
+getTail = fromMaybe [] <<< tail
 
 getAcc :: Array HasColor -> HasColor
-getAcc r = fromMaybe hasColorInit (Data.Array.last r)
+getAcc = fromMaybe hasColorInit <<< last
 
 compareToIndex :: Index -> Int -> BarHasColor -> HasColor
 compareToIndex i n bar = if n < (i - currentArrayLength) then
@@ -49,6 +49,6 @@ compareToIndex i n bar = if n < (i - currentArrayLength) then
 
     --Lenses
 setInitColor :: VexFlowMusic -> NotationHasColor
-setInitColor =  mapVoices $ const false
+setInitColor = mapVoices $ const false
   where
     mapVoices = map <<< map <<< map

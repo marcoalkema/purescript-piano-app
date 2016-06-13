@@ -32,8 +32,13 @@ import MidiToVexFlow
 import Quantizer
 import ColorNotation
 
-type AppEffects = (dom :: DOM)
-type MidiNote = Int
+type AppEffects = (dom :: DOM, heartbeat :: HEARTBEAT, console :: CONSOLE, channel :: CHANNEL, err :: EXCEPTION, vexFlow :: VEXFLOW, midi :: MidiPlayer.MIDI, canvas :: ClearCanvas.CANVAS)
+type MidiNote       = Int
+type MidiNotes      = { midiNotes :: Array MidiJsTypes.MidiNote }
+type UnsafeMidiData = Foreign
+type Ticks          = Number
+
+midiFile = "jig.mid"
 
 -- Entry point for the browser.
 -- main :: forall e. State -> Eff (heartbeat :: HEARTBEAT, console :: CONSOLE, dom :: DOM, channel :: CHANNEL, err :: EXCEPTION, vexFlow :: VEXFLOW, midi :: MidiPlayer.MIDI, canvas :: ClearCanvas.CANVAS | e) (App State Action)
@@ -80,7 +85,6 @@ main state = do
       rightLocatorSignal = subscribe rightLocatorChannel ~> setRightLocator
 
   recordNotePlaybackChannel <- channel 0
-  -- let recordNotePlaybackSignal :: forall a. a -> Signal Int
   let recordNotePlaybackSignal = (~>) (dropRepeats $ subscribe recordNotePlaybackChannel)
 
   app <- start
@@ -107,16 +111,16 @@ getAppFunctionality s = if s.ui.recordButtonPressed then
 
 -- TODO create Canvas *once*, and clear repeatedly; clearCanvas should take a Canvas value instead of a String
 draw i midi notationHasColor = do
-  -- clearCanvas "notationCanvas"
+  clearCanvas "notationCanvas"
   canvas <- createCanvas "notationCanvas"
   renderMidi canvas i notationHasColor midi 
   return unit
 
 -- TODO use a type alias instead of Foreign
-loadMidi :: forall e. Eff (midi :: MIDI, channel :: CHANNEL | e) { midi :: Channel (Array Foreign), ticks :: Channel Number }
+loadMidi :: forall e. Eff (midi :: MIDI, channel :: CHANNEL | e) { midi :: Channel (Array UnsafeMidiData), ticks :: Channel Ticks}
 loadMidi = do
   midiDataChannel <- channel []
-  ticksChannel <- channel 0.0
+  ticksChannel    <- channel 0.0
   MidiPlayer.loadFile midiFile
   MidiPlayer.loadPlugin
     { soundfontUrl : "midi/examples/soundfont/"
@@ -125,8 +129,6 @@ loadMidi = do
   return { midi  : midiDataChannel
          , ticks : ticksChannel }
 
-midiFile = "jig.mid"
-
 drawNoteHelper playBackNote userNote = do
   clearRect "noteHelperCanvas"
   noteHelperCanvas   <- createCanvas "noteHelperCanvas"
@@ -134,11 +136,9 @@ drawNoteHelper playBackNote userNote = do
   noteHelper         <- drawHelperStaff noteHelperRenderer playBackNote userNote
   return unit
 
-type MidiNotes = { midiNotes :: Array MidiJsTypes.MidiNote }
-
 getMidiNotes = map (_.noteNumber)
 
-processMidi :: Array Foreign -> MidiNotes
+processMidi :: Array UnsafeMidiData -> MidiNotes
 processMidi midiData = do
   let safeData  :: List MidiJsTypes.MidiEvent
       safeData  = toList $ map unsafeF1 midiData
