@@ -17,7 +17,7 @@ drawHelperStaff renderer userNote playBackNote = do
                          , duration : "4"}]
                        , [{ pitch : [vexNoteToVexFlowPitch $ midiNoteToVexTone playBackNote]
                           , duration : "4"}]]
-  setColor notes [[false], [true]]
+  setColor notes [[true], [false]]
   accidentals <- addAccidentals notes $ vexBarToIndexedAccidentals $ midiNoteToVexNote userNote playBackNote
   voice <- addNotesToVoice accidentals (createNewVoice 1 4.0)
   formatter voice (200.0)
@@ -37,8 +37,3 @@ userNote' :: MidiNote -> VexNote
 userNote' note = { note     : [userTone note]
                 , duration : "4"
                 }
-
-
-
-melody :: Array MidiNote
-melody = [60, 62, 64, 65, 66, 67]

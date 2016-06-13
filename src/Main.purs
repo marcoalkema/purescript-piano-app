@@ -106,8 +106,8 @@ getAppFunctionality s = if s.ui.recordButtonPressed then
                           s.ui.currentPlayBackNote
 
 -- TODO create Canvas *once*, and clear repeatedly; clearCanvas should take a Canvas value instead of a String
-draw i midi notationHasColor= do
-  clearCanvas "notationCanvas"
+draw i midi notationHasColor = do
+  -- clearCanvas "notationCanvas"
   canvas <- createCanvas "notationCanvas"
   renderMidi canvas i notationHasColor midi 
   return unit
@@ -125,7 +125,7 @@ loadMidi = do
   return { midi  : midiDataChannel
          , ticks : ticksChannel }
 
-midiFile = "colorTest4.mid"
+midiFile = "jig.mid"
 
 drawNoteHelper playBackNote userNote = do
   clearRect "noteHelperCanvas"

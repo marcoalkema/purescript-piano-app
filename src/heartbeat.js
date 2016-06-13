@@ -45,15 +45,15 @@ module.exports = {
 
 							// Create handlers for UI Piano buttons
 							var keys = {};							   
-							var keyNames = Array.apply(null, Array(71)).map(function (_, i) {return ((i + 12));});
+							var keyNames = Array.apply(null, Array(71)).map(function (_, i) {return ((i));});
 							keyNames.map(function(n){
 			    				    var key = "pianoKey".concat(n.toString());
 							    var btnKey = document.getElementById(key);
 							    btnKey.disabled = false;
 							    keys[key] = btnKey;
 							    btnKey.addEventListener('mousedown', startNote, false);
-							    btnKey.addEventListener('mouseup', stopNote, false);
-							    btnKey.addEventListener('mouseout', stopNote, false);
+							    btnKey.addEventListener('mouseup'  , stopNote, false);
+							    btnKey.addEventListener('mouseout' , stopNote, false);
 							});
 							
 							song.tracks.forEach(function(track){
@@ -72,41 +72,42 @@ module.exports = {
 							var track2 = sequencer.createTrack();
 							track2.monitor = true;
 							song.addTrack(track2);
+
+							console.log(track);
 							
 							track.movePart(song.tracks[0].parts[0], 960 * 4);
-							song.update();
 							
+							song.update();
+							console.log(track);
 							// PureScript Channel for MidiNote signal
-							channel(function(noteNumber){
-							    if (setRecord){
-								console.log(noteNumber);
+							// channel(function(noteNumber){
+							//     if (setRecord){
+							// 	// var events = sequencer.util.getRandomNotes({
+							// 	//     minNoteNumber: noteNumber,
+							// 	//     maxNoteNumber: noteNumber,
+							// 	//     minVelocity: 100,
+							// 	//     maxVelocity: 100,
+							// 	//     noteDuration: 1000, //ticks
+							// 	//     numNotes: 1
+							// 	// });
 								
-								var events = sequencer.util.getRandomNotes({
-								    minNoteNumber: 60,
-								    maxNoteNumber: 60,
-								    minVelocity: 100,
-								    maxVelocity: 100,
-								    noteDuration: 1000, //ticks
-								    numNotes: 1
-								});
-								
-								sequencer.processEvents(events, 120);
-								// track2.processMidiEvent(sequencer.createMidiEvent(500, sequencer.NOTE_ON, 60, 100));
-								// track2.processMidiEvent(sequencer.createMidiEvent(3000, sequencer.NOTE_OFF, 60));
-							    }
-							});
+							// 	// sequencer.processEvents(events, 120);
+							// 	// track2.processMidiEvent(sequencer.createMidiEvent(500, sequencer.NOTE_ON, 60, 100));
+							// 	// track2.processMidiEvent(sequencer.createMidiEvent(3000, sequencer.NOTE_OFF, 60));
+							//     }
+							// });
 							
 							function updateOnScreenKeyboard(event){
 							    send2(event.data1)();
 							}
 							
 							function startNote(){
-							    var noteNumber = sequencer.getNoteNumber(Number((this.id).split('pianoKey').join('')) + 12);
+							    var noteNumber = sequencer.getNoteNumber(Number((this.id).split('pianoKey').join('')) + 24);
 							    track.processMidiEvent(sequencer.createMidiEvent(0, sequencer.NOTE_ON, noteNumber, 100));
 							}
 							
 							function stopNote(){
-							    var noteNumber = sequencer.getNoteNumber(Number((this.id).split('pianoKey').join('')) + 12);
+							    var noteNumber = sequencer.getNoteNumber(Number((this.id).split('pianoKey').join('')) + 24);
 							    track.processMidiEvent(sequencer.createMidiEvent(0, sequencer.NOTE_OFF, noteNumber));
 							}
 							
@@ -122,13 +123,34 @@ module.exports = {
 							    if (setRecord == false) {
 								send1(midiEvent.data1)();
 							    }
-							    
 							});
 							
 							//Handler for end of track
 							song.addEventListener('end', function(midiEvent){
+							    document.getElementById("canvasDiv").scrollTop = 0;
 							    send3(true)();
-X1							});
+							});
+
+							song.addEventListener('event', 'type = NOTE_ON' , function(event){
+							    var bar    = Number(event.bar) - 2;
+							    var canvas = document.getElementById("canvasDiv");
+							    scrollTo(canvas, bar);
+							});
+
+							function scrollTo(element, index) {
+							    if (index % 4 == 0 && (setRecord == false)){
+								element.scrollTop = index * 50;
+								// if (difference == 0) return;
+								// console.log("HOIHOIHOI");
+								// var to = index * 50;
+								// var difference = to - element.scrollTop;
+								
+								// setTimeout(function() {
+								//     element.scrollTop = element.scrollTop + 10;
+								//     if (element.scrollTop === to) return;
+								//     scrollTo(element, index);}, 10);
+							    }
+							}
 							
 							//HANDLERS FOR UI BUTTONS
 							btnPlay.addEventListener('click', function(){
