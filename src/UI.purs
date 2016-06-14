@@ -6,6 +6,7 @@ import Math
 import Math (max)
 import Data.Int (round, toNumber)
 import Data.Array
+import Data.Array(head)
 import Data.Foldable
 import Pux.Html as Pux
 import Pux.Html.Events
@@ -22,7 +23,28 @@ import Data.Foreign
 import ColorNotation
 import VexMusic
 
-data Action = PlayButtonPressed | PauseButtonPressed | StopButtonPressed | LoopButtonPressed | RecordButtonPressed | MetronomeButtonPressed | NoteHelperResize | IncrementPlayBackIndex | ResetMelody | SetMidiKeyBoardInput MidiNote | PianoKeyPressed Note Octave | SetPlayBackNote MidiNote | SetMidiData (Array MidiNote) | SetMidiEvent (Array Foreign) | SetTicks Number | ResetPlayback | ScoreOkButtonPressed | TempoSliderChanged Int | NoteButtonPressed | SettingsButtonPressed | SetLeftLocatorSlider Int | SetRightLocatorSlider Int
+data Action = PlayButtonPressed
+            | PauseButtonPressed
+            | StopButtonPressed
+            | LoopButtonPressed
+            | RecordButtonPressed
+            | MetronomeButtonPressed
+            | NoteButtonPressed
+            | SettingsButtonPressed
+            | NoteHelperResize
+            | IncrementPlayBackIndex
+            | ResetMelody
+            | SetMidiKeyBoardInput MidiNote
+            | PianoKeyPressed Note Octave
+            | SetPlayBackNote MidiNote
+            | SetMidiData (Array MidiNote)
+            | SetMidiEvent (Array Foreign)
+            | SetTicks Number
+            | ResetPlayback
+            | ScoreOkButtonPressed
+            | TempoSliderChanged Int
+            | SetLeftLocatorSlider Int
+            | SetRightLocatorSlider Int
 
 data Note = NoteC | NoteCis | NoteD | NoteDis | NoteE | NoteF | NoteFis | NoteG | NoteGis | NoteA | NoteAis | NoteB
 
@@ -84,7 +106,7 @@ update (SetMidiKeyBoardInput n) state = state { currentMidiKeyboardInput = n
                                                                              newMelody
                                                                            else
                                                                              state.currentPlayBackMelody
-                                              , currentUserMelodyHead    = fromMaybe 0 $ Data.Array.head newMelody
+                                              , currentUserMelodyHead    = fromMaybe 0 $ head newMelody
                                               , scoreWindowActivated     = checkLastNote n
                                               , recordButtonPressed      = if checkLastNote n then
                                                                              false
@@ -96,7 +118,7 @@ update (SetMidiKeyBoardInput n) state = state { currentMidiKeyboardInput = n
                         else
                           false
       currentNote :: Maybe Int
-      currentNote = Data.Array.head state.userMelody
+      currentNote = head state.userMelody
       newMelody = matchUserInput state.userMelody
       incIndex = if currentNote == Nothing then
                    0
@@ -108,7 +130,7 @@ update (SetMidiKeyBoardInput n) state = state { currentMidiKeyboardInput = n
       matchUserInput playBackNotes = if currentNote == Nothing then
                                        state.currentPlayBackMelody
                                      else if (Just n) == currentNote then
-                                            fromMaybe [] $ Data.Array.tail playBackNotes
+                                            fromMaybe [] $ tail playBackNotes
                                           else
                                             playBackNotes
                                               
@@ -131,7 +153,7 @@ update RecordButtonPressed state      = state { recordButtonPressed      = not s
                                               , userMelody               = state.currentPlayBackMelody
                                               , currentPlayBackNoteIndex = if state.recordButtonPressed then
                                                                              -1
-                                                                               else
+                                                                           else
                                                                              0
                                               , playButtonPressed        = true
                                               , userNotes                = [] }
@@ -208,7 +230,7 @@ initEvent = { vexFlowNotes : [[[{ pitch    : ["c/4"]
           
 setMelody :: State -> State
 setMelody state = state { userMelody            = newMelody 
-                        , currentUserMelodyHead = fromMaybe 0 $ Data.Array.head newMelody }
+                        , currentUserMelodyHead = fromMaybe 0 $ head newMelody }
   where
     newMelody = matchUserInput state.currentMidiKeyboardInput state.userMelody
 
@@ -569,7 +591,7 @@ checkRecordEnabled s = if s.recordButtonPressed then
                          s.currentPlayBackNote
                     
 drawOctave :: Octave  -> MidiNote -> Array MidiNote -> MidiNote -> (Html Action)
-drawOctave oct notePlayed userNote selectedNote = Pux.div [] $ drawKeys oct notePlayed userNote selectedNote
+drawOctave oct notePlayed userNote = Pux.div [] <<< drawKeys oct notePlayed userNote 
 
 drawKeys :: Octave -> MidiNote -> Array MidiNote -> MidiNote -> Array (Html Action)
 drawKeys octave notePlayed userNote selectedNote  = map (\pos -> drawKey pos octave notePlayed userNote selectedNote) positions
@@ -577,7 +599,6 @@ drawKeys octave notePlayed userNote selectedNote  = map (\pos -> drawKey pos oct
 drawKey :: PosRec -> Octave -> MidiNote -> Array MidiNote -> MidiNote -> Html Action                          
 drawKey posRec octave notePlayed userNote selectedNote = (Pux.div [ onMouseDown (const (PianoKeyPressed posRec.note octave))
                                                                   , id_ $ "pianoKey" ++ (show $ (toMidiNote posRec.note octave) - 12)
-                                                                  -- , onMouseDown (const SetUserMelody)
                                                                   , styles posRec octave notePlayed userNote] [Pux.img [ src $ ((++) (getColor posRec) $ keyStatus posRec octave notePlayed userNote selectedNote) ++ keyShadow posRec octave
                                                                                                                        , style { height : "100%"
                                                                                                                                , width  : "100%"
@@ -698,15 +719,15 @@ isCurrentNote :: PosRec -> Octave -> MidiNote -> Boolean
 isCurrentNote posRec oct note = toMidiNote posRec.note oct == note
 
 hasMidiNote :: MidiNote -> Array MidiNote -> Boolean
-hasMidiNote note = foldl (\y midiNote -> if midiNote == note then true else y) false
+hasMidiNote note = foldl (\b midiNote -> if midiNote == note then true else b) false
 
 styleWhite :: PosRec -> Int -> MidiNote -> Array MidiNote -> Attribute Action
 styleWhite posRec octave notesPlayed userNotes =
   style { id_        : "whiteKey"
         , borderLeft : "1px solid #444"
         , height     : show whiteKeyHeight ++ "%"
-        , width      : show (whiteKeyWidth / (abs $ toNumber octaveNumber)) ++ "%"
-        , left       : show (((100.0 / abs (toNumber octaveNumber)) * (toNumber octave - 1.0)) + (posRec.position / abs (toNumber octaveNumber))) ++ "%"
+        , width      : show ((/) whiteKeyWidth $ abs $ toNumber octaveNumber) ++ "%"
+        , left       : show ((((/) 100.0 $ abs $ toNumber octaveNumber) * (toNumber octave - 1.0)) + (posRec.position / abs (toNumber octaveNumber))) ++ "%"
         , position   : "absolute"
         , bottom     : "1%" }
 

@@ -42,7 +42,7 @@ compareToIndex i n bar = if n < (i - currentArrayLength) then
   where
     currentArrayIndex     = i - n
     currentArrayLength    = length $ concat bar
-    setElementToTrue      :: Int -> VoiceHasColor -> Maybe (VoiceHasColor)
+    setElementToTrue      :: Index -> VoiceHasColor -> Maybe (VoiceHasColor)
     setElementToTrue i v  = updateAt i true v
     setToTrue             :: BarHasColor
     setToTrue             = map (\voice -> fromMaybe (Data.Array.concat bar) (setElementToTrue currentArrayIndex voice)) bar
