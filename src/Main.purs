@@ -38,7 +38,7 @@ type MidiNotes      = { midiNotes :: Array MidiJsTypes.MidiNote }
 type UnsafeMidiData = Foreign
 type Ticks          = Number
 
-midiFile = "jig.mid"
+midiFile = "test4.mid"
 
 -- Entry point for the browser.
 -- main :: forall e. State -> Eff (heartbeat :: HEARTBEAT, console :: CONSOLE, dom :: DOM, channel :: CHANNEL, err :: EXCEPTION, vexFlow :: VEXFLOW, midi :: MidiPlayer.MIDI, canvas :: ClearCanvas.CANVAS | e) (App State Action)
@@ -145,7 +145,7 @@ processMidi midiData = do
       midiNotes :: Array MidiJsTypes.MidiNote
       midiNotes = toUnfoldable $ Data.List.filter (\x -> x.noteNumber > 0)
                   <<< map (quantizeNote 1000.0 0.0)
-                  <<< calculateDuration
+                  <<< duration
                   <<< map (\midiObject -> Tuple midiObject false) -- midiEventWriter
                   <<< Data.List.filter filterNotes
                   $ toList safeData
