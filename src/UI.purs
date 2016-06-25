@@ -2,12 +2,17 @@ module App.UI where
 
 import Prelude
 import Prelude (map, (/))
+import ColorNotation
 import Math
 import Math (max)
 import Data.Int (round, toNumber)
 import Data.Array
 import Data.Array(head)
 import Data.Foldable
+import Data.Foreign
+import Data.List(toList)
+import Data.Maybe
+import Data.Tuple
 import Pux.Html as Pux
 import Pux.Html.Events
 import Pux.Html.Elements
@@ -15,15 +20,10 @@ import Pux.Html.Elements (span)
 import Pux.Html.Attributes
 import Pux.Html.Attributes (style)
 import MidiPlayer
-import NoteHelper
-import Data.Maybe
-import VexFlow
 import MidiToVexFlow
-import Data.Foreign
-import ColorNotation
+import NoteHelper
+import VexFlow
 import VexMusic
-import Data.List(toList)
-
 
 data Action = PlayButtonPressed
             | PauseButtonPressed
@@ -313,7 +313,7 @@ view state = do
                                                                                                                                                                                                  , maxWidth  : "100%" 
                                                                                                                                                                                                  } ] [] ]
                                                                                                                                , Pux.div [ id_ "Note_button"
-                                                                                                                                         -- , onClick $ const NoteButtonPressed
+                                                                                                                                         , onClick $ const NoteButtonPressed
                                                                                                                                          , style { height     : "100%"
                                                                                                                                                  , width      : "15%"
                                                                                                                                                  , marginRight : "10%"
@@ -337,7 +337,7 @@ view state = do
                                                                                                                                                                                          , style { maxHeight : "100%"
                                                                                                                                                                                                  , maxWidth  : "100%" 
                                                                                                                                                                                                  } ] [] ]] ]
-                             , Pux.div [ id_ "fooBar"
+                             , Pux.div [ id_ ""
                                        , style { height     : "1%"
                                                , width      : "100%"
                                                , background : "#F4F4F4"} ] []
@@ -412,35 +412,71 @@ view state = do
                                                                                                                                                                                                                       , marginLeft : "39%"
                                                                                                                                                                                                                       , position : "relative"}] [] ]]]
                                ]
-                             , Pux.div [style { height     : "55%"
-                                              , width      : "55%"
-                                              , top        : "15%"
-                                              , left       : (if state.settingsButtonPressed then
-                                                               "100%"
+                               -- noteCount state.midiNotes
+                               , Pux.div [style { height     : "55%"
+                                                , width      : "55%"
+                                                , top        : "15%"
+                                                , left       : (if state.noteButtonPressed then
+                                                                  "100%"
                                                                else
-                                                               "22.5%")
-                                              , position   : "absolute"
-                                              , background : "#FFFFFF"
-                                              , border     : "3px solid #DDD"
-                                              , fontFamily : "Amiri"
-                                              , fontStyle  : "serif"
-                                              , fontSize   : "30px" }] [ Pux.div [ style { height : "33.3%"
-                                                                                         , width  : "100%"
-                                                                                         , background : "white"} ] [ Pux.div [ style { marginTop   : "3.5%"
-                                                                                                                                      , marginLeft  : "30%"
-                                                                                                                                      , height      : "30%"
-                                                                                                                                      , textAlign   : "center"
-                                                                                                                                      , width       : "40%"
-                                                                                                                                      , color       : "#FAFAFA"
-                                                                                                                                      , background  : "#679292"} ] [ text "LOOP"
-                                                                                                                                                                   , Pux.div [style { height : "50%" }] [ Pux.Html.Elements.input [ type_ "range"
-                                                                                                                                                                                                                                  , id_ "leftLocator"
-                                                                                                                                                                                                                                  , Pux.Html.Attributes.min "1"
-                                                                                                                                                                                                                                  , Pux.Html.Attributes.max "20"
-                                                                                                                                                                                                                                  , Pux.Html.Attributes.step "1"
-                                                                                                                                                                                                                                  , Pux.Html.Attributes.defaultValue "1"
-
-                                                                                                                                                                                                                                  ] []]
+                                                                 "22.5%")
+                                                , position   : "absolute"
+                                                , background : "#FFFFFF"
+                                                , border     : "3px solid #DDD"
+                                                , fontFamily : "Amiri"
+                                                , fontStyle  : "serif"
+                                                , fontSize   : "30px" }] [Pux.div [style { height : "100%"
+                                                                                         , width  : "100%"}] [ Pux.div [ style { height : "85%"
+                                                                                                                               , width : "13%"
+                                                                                                                               , display : "inline-block"
+                                                                                                                               , marginTop : "3%"
+                                                                                                                               , borderRight : "1.3px solid #000"} ] [] 
+                                                                                                             , Pux.div [ style { height : "85%"
+                                                                                                                               , width : "85%"
+                                                                                                                               , marginTop : "3%"
+                                                                                                                               , display : "inline-block" }] [Pux.div [ style { height : "100%"
+                                                                                                                                                                              , width  : "80%"
+                                                                                                                                                                              , display : "block" }
+                                                                                                                                                                                -- , borderLeft :  "3% solid #000"
+                                                                                                                                                                      ] (createChart state)
+                                                                                                                                                             , Pux.div [ style { height : "12%"
+                                                                                                                                                                               , width : "80%"
+                                                                                                                                                                               , display : "block"
+                                                                                                                                                                               , borderTop : "1.3px solid #000"}] []
+                                                                                                                                                 ]
+                                                                                                             ]
+                                                                          ]
+                                                                                                              
+                                
+                               , Pux.div [style { height     : "55%"
+                                                , width      : "55%"
+                                                , top        : "15%"
+                                                , left       : (if state.settingsButtonPressed then
+                                                                  "100%"
+                                                                else
+                                                                  "22.5%")
+                                                , position   : "absolute"
+                                                , background : "#FFFFFF"
+                                                , border     : "3px solid #DDD"
+                                                , fontFamily : "Amiri"
+                                                , fontStyle  : "serif"
+                                                , fontSize   : "30px" }] [ Pux.div [ style { height : "33.3%"
+                                                                                           , width  : "100%"
+                                                                                           , background : "white"} ] [ Pux.div [ style { marginTop   : "3.5%"
+                                                                                                                                       , marginLeft  : "30%"
+                                                                                                                                       , height      : "30%"
+                                                                                                                                       , textAlign   : "center"
+                                                                                                                                       , width       : "40%"
+                                                                                                                                       , color       : "#FAFAFA"
+                                                                                                                                       , background  : "#679292"} ] [ text "LOOP"
+                                                                                                                                                                    , Pux.div [style { height : "50%" }] [ Pux.Html.Elements.input [ type_ "range"
+                                                                                                                                                                                                                                   , id_ "leftLocator"
+                                                                                                                                                                                                                                   , Pux.Html.Attributes.min "1"
+                                                                                                                                                                                                                                   , Pux.Html.Attributes.max "20"
+                                                                                                                                                                                                                                   , Pux.Html.Attributes.step "1"
+                                                                                                                                                                                                                                   , Pux.Html.Attributes.defaultValue "1"
+                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                   ] []]
                                                                                                                                                                    , Pux.div [style { height : "50%" }] [ Pux.Html.Elements.input [ type_ "range"
                                                                                                                                                                                                                                 , id_ "rightLocator"
                                                                                                                                                                                                                                 , Pux.Html.Attributes.min "1"
@@ -535,6 +571,43 @@ buttons state = [ Pux.div [ id_ "Play_button"
                                                                             , maxWidth  : "100%" 
                                                                             } ] [] ]
           ]
+
+
+
+
+
+
+createChart state = map createDiv notes
+  where
+    notes           = noteCount state.midiData
+    maxAmountLength = foldl (\b (Tuple note amount) -> if amount > b then amount else b) 0 notes
+    noteAmount      = length notes
+    spacing         = 3.0
+    createDiv (Tuple note amount) = Pux.div [style { height     : "100%"
+                                                   , width      : flip append "%" <<< show $ 100.0 / (toNumber noteAmount) - spacing
+                                                   , background : "blue"
+                                                   , marginLeft : (show spacing) ++ "%"
+                                                   , position : "relative"
+                                                   , display : "inline-block"
+                                                   , color : "white"
+                                                   , fontSize : "15"
+                                                   , borderLeft : (show spacing) ++ "%" }] [Pux.div [style { height     : flip append "%" <<< show <<< (-) 100.0 $ 100.0 / (toNumber maxAmountLength) * (toNumber amount) - 5.0
+                                                                                                           , width : "100%"
+                                                                                                           , textAlign : "center"
+                                                                                                           , fontSize  : "4px"
+                                                                                                           , display : "block"
+                                                                                                           , background : "white"}] [Pux.div [style {bottom : "10%"}] [-- text $ show amount
+                                                                                                                                                                    ]
+                                                                                                                                   ]
+                                                                                           ]
+                                    
+
+noteCount :: Array MidiNote -> Array (Tuple MidiNote Int)
+noteCount midiNotes = zip sortedNotes amounts
+  where
+    sortedNotes = sort $ nub midiNotes
+    count n = foldl (\b note -> if note == n then b + 1 else b) 0 midiNotes
+    amounts = map count sortedNotes
                 
 metronomeButtonPressed :: Boolean -> String
 metronomeButtonPressed b = if b then

@@ -35,7 +35,6 @@ import ColorNotation
 type AppEffects = (dom :: DOM, heartbeat :: HEARTBEAT, console :: CONSOLE, channel :: CHANNEL, err :: EXCEPTION, vexFlow :: VEXFLOW, midi :: MidiPlayer.MIDI, canvas :: ClearCanvas.CANVAS)
 type MidiNote       = Int
 type MidiNotes      = { midiNotes :: Array MidiJsTypes.MidiNote }
-type UnsafeMidiData = Foreign
 type Ticks          = Number
 
 midiFile = "test4.mid"
@@ -116,7 +115,6 @@ draw i midi notationHasColor = do
   renderMidi canvas i notationHasColor midi 
   return unit
 
--- TODO use a type alias instead of Foreign
 loadMidi :: forall e. Eff (midi :: MIDI, channel :: CHANNEL | e) { midi :: Channel (Array UnsafeMidiData), ticks :: Channel Ticks}
 loadMidi = do
   midiDataChannel <- channel []
@@ -143,10 +141,10 @@ processMidi midiData = do
   let safeData  :: List MidiJsTypes.MidiEvent
       safeData  = toList $ map unsafeF1 midiData
       midiNotes :: Array MidiJsTypes.MidiNote
-      midiNotes = toUnfoldable $ Data.List.filter (\x -> x.noteNumber > 0)
+      midiNotes = toUnfoldable $ Data.List.filter (\note -> note.noteNumber > 0)
                   <<< map (quantizeNote 1000.0 0.0)
                   <<< duration
-                  <<< map (\midiObject -> Tuple midiObject false) -- midiEventWriter
+                  <<< map (\midiObject -> Tuple midiObject false)
                   <<< Data.List.filter filterNotes
                   $ toList safeData
   { midiNotes }
