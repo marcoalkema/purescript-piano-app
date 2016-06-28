@@ -1,5 +1,5 @@
 __Description__
-This application is intended to help users to learn how to play piano and has the following features:
+This application intents to help users to learn how to play piano and has the following features:
 * Animated score which improves learning how to read music.
 * Animated piano keyboard which make following the music easier.
 * Loop and metronome
