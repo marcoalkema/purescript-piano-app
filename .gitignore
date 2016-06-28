@@ -8,3 +8,6 @@ npm-debug.log
 html
 .pulp-cache
 support
+main.js
+main.js.map
+index.html
