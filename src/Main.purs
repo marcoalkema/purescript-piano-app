@@ -1,46 +1,42 @@
 module Main where
 
 import App.Routes (match)
-import App.Layout
+import App.Layout (State, Action(Child, PageView), view, update)
 import App.UI as UI
-import Control.Monad.Aff
-import Control.Monad.Eff
-import Control.Monad.Eff.Class 
-import Control.Monad.Eff.Exception
-import Control.Monad.Eff.Console
-import Data.Tuple
-import Data.Foldable
-import Data.Foreign
-import Data.List
-import Data.Function
-import Data.Maybe
-import DOM.Timer
+import Control.Monad.Eff (Eff) 
+import Control.Monad.Eff.Exception (EXCEPTION)
+import Control.Monad.Eff.Console (CONSOLE)
+import Data.Tuple (Tuple(Tuple))
+import Data.Foreign (Foreign)
+import Data.List (List, toList, toUnfoldable)
+import Data.Maybe (fromMaybe)
 import DOM (DOM)
-import Prelude
-import Pux
+import Prelude (Unit, (<<<), ($), map, (>), unit, return, bind, const)
+import Pux  (App, renderToDOM, fromSimple, start)
 import Pux.Router (sampleUrl)
-import Pux.Html (Html)
-import Signal
-import Signal.Channel
-import VexFlow
-import MidiPlayer
+import Signal (Signal, (~>), runSignal, mergeMany, dropRepeats)
+import Signal.Channel  (Channel, CHANNEL, send, channel, subscribe)
+import ClearCanvas (clearRect, clearCanvas)
+import HeartBeat (HEARTBEAT, loadHeartBeat)
+import MidiPlayer (UnsafeMidiData, MIDI)
 import MidiToVexFlow (renderMidi)
-import HeartBeat
-import NoteHelper
-import ClearCanvas
-import MidiToVexFlow
-import Quantizer
-import ColorNotation
+import MidiToVexFlow (filterNotes, duration, unsafeF1, renderMidi)
+import NoteHelper (drawHelperStaff)
+import Quantizer (quantizeNote)
+import VexFlow (VEXFLOW, createRenderer, createCanvas)
+
 
 type AppEffects = (dom :: DOM, heartbeat :: HEARTBEAT, console :: CONSOLE, channel :: CHANNEL, err :: EXCEPTION, vexFlow :: VEXFLOW, midi :: MidiPlayer.MIDI, canvas :: ClearCanvas.CANVAS)
 type MidiNote       = Int
 type MidiNotes      = { midiNotes :: Array MidiJsTypes.MidiNote }
 type Ticks          = Number
+type MidiFile       = String
 
+midiFile :: MidiFile
 midiFile = "midi/jig.mid"
 
 -- Entry point for the browser.
--- main :: forall e. State -> Eff (heartbeat :: HEARTBEAT, console :: CONSOLE, dom :: DOM, channel :: CHANNEL, err :: EXCEPTION, vexFlow :: VEXFLOW, midi :: MidiPlayer.MIDI, canvas :: ClearCanvas.CANVAS | e) (App State Action)
+main :: forall e. State -> Eff (heartbeat :: HEARTBEAT, console :: CONSOLE, dom :: DOM, channel :: CHANNEL, err :: EXCEPTION, vexFlow :: VEXFLOW, midi :: MidiPlayer.MIDI, canvas :: ClearCanvas.CANVAS | e) (App State Action)
 main state = do
   midiDataChannels <- loadMidi
   let midiDataSignal :: Signal (Array Foreign)
@@ -48,7 +44,7 @@ main state = do
       ticksSignal :: Signal Action
       ticksSignal = subscribe midiDataChannels.ticks ~> setTicks
       processedMidiSignal :: Signal Action
-      processedMidiSignal = midiDataSignal ~> setMidiData <<< getMidiNotes <<< (_.midiNotes) <<< processMidi
+      processedMidiSignal = midiDataSignal ~> setMidiData <<< map (_.noteNumber) <<< (_.midiNotes) <<< processMidi
       midiEventSignal :: Signal Action
       midiEventSignal = midiDataSignal ~> setMidiEvent
 
@@ -127,14 +123,13 @@ loadMidi = do
   return { midi  : midiDataChannel
          , ticks : ticksChannel }
 
+drawNoteHelper :: forall e. MidiNote -> MidiNote -> Eff (canvas :: ClearCanvas.CANVAS, vexFlow :: VEXFLOW | e) Unit
 drawNoteHelper playBackNote userNote = do
   clearRect "noteHelperCanvas"
   noteHelperCanvas   <- createCanvas "noteHelperCanvas"
   noteHelperRenderer <- createRenderer noteHelperCanvas 
   noteHelper         <- drawHelperStaff noteHelperRenderer playBackNote userNote
   return unit
-
-getMidiNotes = map (_.noteNumber)
 
 processMidi :: Array UnsafeMidiData -> MidiNotes
 processMidi midiData = do
@@ -157,7 +152,7 @@ incrementPlayIndex _ = Child (UI.IncrementPlayBackIndex)
 
 setCurrentPlayBackNote :: MidiNote -> App.Layout.Action
 setCurrentPlayBackNote = Child <<< UI.SetPlayBackNote
-
+--k
 setMidiData :: (Array MidiNote) -> App.Layout.Action
 setMidiData = Child <<< UI.SetMidiData
 

@@ -357,16 +357,16 @@ view state = do
                                                                                            , marginRight : "1%"}
                                                                                    , height "1000%"
                                                                                    , width "1240%" ] [] ]
-                             , Pux.div [ style { height     : "6%"
-                                               , width      : "100%"
-                                               , top : "10%"
-                                               , background : "#F4F4F4"
-                                               , position  : "absolute"
-                                               } ] [ -- text $ "Currently selected note : " ++ show state.currentPlayBackMelody
-                                                   -- , text $ "        " ++ show state.currentUserMelodyHead
-                                  text $ "        " ++ show state.playButtonPressed
-                                  , text $ "        " ++ show state.recordButtonPressed
-                                  ]
+                             -- , Pux.div [ style { height     : "6%"
+                             --                   , width      : "100%"
+                             --                   , top : "10%"
+                             --                   , background : "#F4F4F4"
+                             --                   , position  : "absolute"
+                             --                   } ] [ -- text $ "Currently selected note : " ++ show state.currentPlayBackMelody
+                             --                       -- , text $ "        " ++ show state.currentUserMelodyHead
+                             --      text $ "        " ++ show state.playButtonPressed
+                             --      , text $ "        " ++ show state.recordButtonPressed
+                             --      ]
                                                    -- , text $ "        " ++ show state.ticks
                                                    -- , text $ "        " ++ show state.currentMidiKeyboardInput
                                                    -- , text $ "        " ++ show state.currentUIPianoSelection
@@ -418,7 +418,6 @@ view state = do
                                                                                                                                                                                                                       , marginLeft : "39%"
                                                                                                                                                                                                                       , position : "relative"}] [] ]]]
                                ]
-                               -- noteCount state.midiNotes
                                , Pux.div [style { height     : "55%"
                                                 , width      : "55%"
                                                 , top        : "15%"
@@ -431,24 +430,33 @@ view state = do
                                                 , border     : "3px solid #DDD"
                                                 , fontFamily : "Amiri"
                                                 , fontStyle  : "serif"
-                                                , fontSize   : "30px" }] [Pux.div [style { height : "100%"
-                                                                                         , width  : "100%"}] [ Pux.div [ style { height : "85%"
-                                                                                                                               , width : "13%"
-                                                                                                                               , display : "inline-block"
-                                                                                                                               , marginTop : "3%"
-                                                                                                                               , borderRight : "1.3px solid #000"} ] [] 
-                                                                                                             , Pux.div [ style { height : "85%"
-                                                                                                                               , width : "85%"
-                                                                                                                               , marginTop : "3%"
-                                                                                                                               , display : "inline-block" }] [Pux.div [ style { height : "100%"
-                                                                                                                                                                              , width  : "80%"
-                                                                                                                                                                              , display : "block" }
-                                                                                                                                                                                -- , borderLeft :  "3% solid #000"
+                                                , fontSize   : "30px" }] [Pux.div [style { height : "96%"
+                                                                                         , marginTop: "2.5%"
+                                                                                         , width  : "100%"}] [ Pux.div [ style { height    : "95%"
+                                                                                                                               , width     : "15%"
+                                                                                                                               -- , marginTop : "3.5%"
+                                                                                                                               , display   : "inline-block" } ] [ Pux.div [ style { height      : "92.8%"
+                                                                                                                                                                                  , width       : "100%"
+                                                                                                                                                                                  , display     : "block"
+                                                                                                                                                                                  , borderRight : "1.3px solid #000"}] []
+                                                                                                                                                                , Pux.div [ style { height      : "2%"
+                                                                                                                                                                                  , width       : "98%"
+                                                                                                                                                                                  , display     : "block" }] []
+                                                                                                                                                              ]
+                                                                                                                                                                                      
+                                                                                                             , Pux.div [ style { height    : "90%"
+                                                                                                                               -- , marginTop : "3.5%"
+                                                                                                                               , width     : "85%"
+                                                                                                                               , marginBottom : "-3%"
+                                                                                                                               , display   : "inline-block" }] [Pux.div [ style { height    : "89%"
+                                                                                                                                                                                , marginTop : "1%"
+                                                                                                                                                                                , width     : "80%"
+                                                                                                                                                                                , display   : "block" }
                                                                                                                                                                       ] (createChart state)
-                                                                                                                                                             , Pux.div [ style { height : "12%"
-                                                                                                                                                                               , width : "80%"
-                                                                                                                                                                               , display : "block"
-                                                                                                                                                                               , borderTop : "1.3px solid #000"}] []
+                                                                                                                                                             , Pux.div [ style { height    : "9%"
+                                                                                                                                                                               , width     : "80%"
+                                                                                                                                                                               , display   : "block"
+                                                                                                                                                                               , borderTop : "1.3px solid #000"}] (chartNumbering $ sortedNotes state.midiData)
                                                                                                                                                  ]
                                                                                                              ]
                                                                           ]
@@ -582,7 +590,7 @@ buttons state = [ Pux.div [ id_ "Play_button"
 
 
 
-
+createChart :: State -> Array (Html Action)
 createChart state = map createDiv notes
   where
     notes           = noteCount state.midiData
@@ -596,24 +604,45 @@ createChart state = map createDiv notes
                                                    , position   : "relative"
                                                    , display    : "inline-block"
                                                    , color      : "white"
-                                                   , fontSize   : "15"
-                                                   , borderLeft : (show spacing) ++ "%" }] [Pux.div [style { height     : flip append "%" <<< show <<< (-) 100.0 $ 100.0 / (toNumber maxAmountLength) * (toNumber amount) - 5.0
-                                                                                                           , width : "100%"
-                                                                                                           , textAlign : "center"
-                                                                                                           , fontSize  : "4px"
-                                                                                                           , display : "block"
-                                                                                                           , background : "white"}] [Pux.div [style {bottom : "10%"}] [-- text $ show amount
-                                                                                                                                                                    ]
-                                                                                                                                   ]
+                                                   , fontSize   : "15"}] [Pux.div [style { height     : flip append "%" <<< show <<< (-) 100.0 $ 100.0 / (toNumber maxAmountLength) * (toNumber amount)
+                                                                                         , width      : "100%"
+                                                                                         , background : "white"}] [Pux.div [style {bottom : "10%"}] []
+                                                                                                                  ]
                                                                                            ]
+
+-- chartPercentages :: Array MidiNote -> Array (Html Action)
+-- chartPercentages 
                                     
+chartNumbering :: Array MidiNote -> Array (Html Action)
+chartNumbering xs = map fn xs
+  where
+    spacing = 3.0
+    fn n = Pux.div [style { height     : "98%"
+                          , width      : flip append "%" <<< show $ 100.0 / (toNumber $ length xs) - spacing
+                          , marginLeft : (show spacing) ++ "%"
+                          , marginBottom : "20%"
+                          , fontSize   : "18px"
+                          , textAlign  : "center"
+                          , top        : "0px"
+                          , display    : "inline-block" }] [ text $ show n
+
+      -- Pux.div [style { height     : "50%"
+                                                           --                  , width      : "100%"
+                                                           --                  , background : "green"}] [text $ show n]
+                                                           -- , Pux.div [style { height     : "50%"
+                                                           --                  , width      : "100%"
+                                                           --                  , background : "red"}] []
+                                                           ]
+                                    
+sortedNotes :: Array MidiNote -> Array MidiNote
+sortedNotes notes = sort $ nub notes
 
 noteCount :: Array MidiNote -> Array (Tuple MidiNote Int)
-noteCount midiNotes = zip sortedNotes amounts
+noteCount midiNotes = zip sortedMidiNotes amounts
   where
-    sortedNotes = sort $ nub midiNotes
-    count n = foldl (\b note -> if note == n then b + 1 else b) 0 midiNotes
-    amounts = map count sortedNotes
+    sortedMidiNotes = sortedNotes midiNotes
+    count n         = foldl (\b note -> if note == n then b + 1 else b) 0 midiNotes
+    amounts         = map count sortedMidiNotes 
                 
 metronomeButtonPressed :: Boolean -> String
 metronomeButtonPressed b = if b then
