@@ -14,4 +14,5 @@ __To install__
 
 __To run__
 * Install by running 'webpack' in console
+* Connect midi-keyboard or use virtual synth like: http://www.manyetas.com/creed/midikeys.html
 * Boot using server
