@@ -15,7 +15,7 @@ var config = {
   debug: true,
   devtool: 'cheap-module-eval-source-map',
   output: {
-    path: path.resolve('./dist'),
+    path: path.resolve(''),
     filename: '[name].js',
     publicPath: '/'
   },

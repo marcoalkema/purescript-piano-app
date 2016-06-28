@@ -308,9 +308,9 @@ view state = do
                                                                                                                                                  , display    : "inline"
                                                                                                                                                  , float      : "left"
                                                                                                                                                  , position   : "relative" } ] [ Pux.img [ src if state.loopButtonPressed then
-                                                                                                                                                                                                 "loopButton.png"
+                                                                                                                                                                                                 "img/loopButton.png"
                                                                                                                                                                                                  else
-                                                                                                                                                                                                 "loopButtonPressed.png"                                                                                                                                                                       
+                                                                                                                                                                                                 "img/loopButtonPressed.png"                                                                                                                                                                       
                                                                                                                                                                                          , style { maxHeight : "100%"
                                                                                                                                                                                                  , maxWidth  : "100%" 
                                                                                                                                                                                                  } ] [] ]
@@ -321,7 +321,7 @@ view state = do
                                                                                                                                                  , marginRight : "10%"
                                                                                                                                                  , display    : "inline"
                                                                                                                                                  , float      : "left"
-                                                                                                                                                 , position   : "relative" } ] [ Pux.img [ src "note.png"
+                                                                                                                                                 , position   : "relative" } ] [ Pux.img [ src "img/noteButton.png"
                                                                                                                                                                                          , style { maxHeight : "100%"
                                                                                                                                                                                                  , maxWidth  : "100%" 
                                                                                                                                                                                                  } ] [] ]
@@ -333,9 +333,9 @@ view state = do
                                                                                                                                                  , display    : "inline"
                                                                                                                                                  , float      : "left"
                                                                                                                                                  , position   : "relative" } ] [ Pux.img [ src if state.settingsButtonPressed then
-                                                                                                                                                                                                 "settingsButton.png"
+                                                                                                                                                                                                 "img/settingsButton.png"
                                                                                                                                                                                                  else
-                                                                                                                                                                                                 "settingsButtonPressed.png"
+                                                                                                                                                                                                 "img/settingsButtonPressed.png"
                                                                                                                                                                                          , style { maxHeight : "100%"
                                                                                                                                                                                                  , maxWidth  : "100%" 
                                                                                                                                                                                                  } ] [] ]] ]
@@ -412,7 +412,7 @@ view state = do
                                                                                                                                     , borderLeft   : "33.3%"
                                                                                                                                     , display : "inline"} ] [ Pux.div [ style { height : "100%"
                                                                                                                                                                                , width  : "100%"} ] [ Pux.img [ onClick $ const ScoreOkButtonPressed
-                                                                                                                                                                                                              , src "okButton.png"
+                                                                                                                                                                                                              , src "img/okButton.png"
                                                                                                                                                                                                               , style { height : "50%"
                                                                                                                                                                                                                       , top      : "30%"
                                                                                                                                                                                                                       , marginLeft : "39%"
@@ -548,9 +548,9 @@ buttons state = [ Pux.div [ id_ "Play_button"
                                   , display    : "inline"
                                   , float      : "left"
                                   , position   : "relative" } ] [ Pux.img [ src if not state.playButtonPressed then
-                                                                                  "playButton.png"
+                                                                                  "img/playButton.png"
                                                                                 else
-                                                                                  "playButtonPressed.png"
+                                                                                  "img/playButtonPressed.png"
                                                                           , style { maxHeight : "100%"
                                                                                   , maxWidth  : "100%" 
                                                                                   } ] [] ]
@@ -561,7 +561,7 @@ buttons state = [ Pux.div [ id_ "Play_button"
                             , marginLeft : "10%"
                             , display    : "inline"
                             , float      : "left"
-                            , position   : "relative" } ] [ Pux.img [ src "pause.png"
+                            , position   : "relative" } ] [ Pux.img [ src "img/pause.png"
                                                                     , style { maxHeight : "100%"
                                                                             , maxWidth  : "100%" 
                                                                             } ] [] ]
@@ -572,7 +572,7 @@ buttons state = [ Pux.div [ id_ "Play_button"
                             , marginLeft : "10%"
                             , display    : "inline"
                             , float      : "left"
-                            , position   : "relative" } ] [ Pux.img [ src "stop.png"
+                            , position   : "relative" } ] [ Pux.img [ src "img/stop.png"
                                                                     , style { maxHeight : "100%"
                                                                             , maxWidth  : "100%" 
                                                                             } ] [] ]
@@ -593,10 +593,10 @@ createChart state = map createDiv notes
                                                    , width      : flip append "%" <<< show $ 100.0 / (toNumber noteAmount) - spacing
                                                    , background : "blue"
                                                    , marginLeft : (show spacing) ++ "%"
-                                                   , position : "relative"
-                                                   , display : "inline-block"
-                                                   , color : "white"
-                                                   , fontSize : "15"
+                                                   , position   : "relative"
+                                                   , display    : "inline-block"
+                                                   , color      : "white"
+                                                   , fontSize   : "15"
                                                    , borderLeft : (show spacing) ++ "%" }] [Pux.div [style { height     : flip append "%" <<< show <<< (-) 100.0 $ 100.0 / (toNumber maxAmountLength) * (toNumber amount) - 5.0
                                                                                                            , width : "100%"
                                                                                                            , textAlign : "center"
@@ -617,15 +617,15 @@ noteCount midiNotes = zip sortedNotes amounts
                 
 metronomeButtonPressed :: Boolean -> String
 metronomeButtonPressed b = if b then
-                             "metronome_pressed.png"
+                             "img/metronome_pressed.png"
                            else
-                             "metronome.png"
+                             "img/metronome.png"
 
 recordButtonPressed :: Boolean -> String
 recordButtonPressed b = if b then
-                             "recordButtonPressed.png"
+                             "img/recordButtonPressed.png"
                            else
-                             "recordButton.png"
+                             "img/recordButton.png"
 
 resizeWindow :: Boolean -> String
 resizeWindow b = if b then
@@ -693,7 +693,7 @@ setPianoId :: Octave -> MidiNote -> Int
 setPianoId o = (+) (12 * o)
 
 getColor :: PosRec -> String
-getColor posRec =  if posRec.isBlack then "black" else "white"
+getColor posRec =  if posRec.isBlack then "img/black" else "img/white"
 
 keyShadow :: PosRec -> Octave -> String
 keyShadow posRec oct = if mod (toMidiNote posRec.note oct) 12 == 11 || mod (toMidiNote posRec.note oct) 12 == 4 then
