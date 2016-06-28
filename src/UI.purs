@@ -110,12 +110,14 @@ update (SetMidiKeyBoardInput n) state = state { currentMidiKeyboardInput = n
                                                                              state.currentPlayBackMelody
                                               , currentUserMelodyHead    = fromMaybe 0 $ head newMelody
                                               , scoreWindowActivated     = checkLastNote n
-                                              , recordButtonPressed      = if checkLastNote n then
-                                                                             false
-                                                                           else
-                                                                             true }
+                                              , recordButtonPressed      = not checkLastNote n
+                                                                           -- if checkLastNote n then
+                                                                           --   false
+                                                                           -- else
+                                                                           --   true 
+                                              }
     where
-      checkLastNote n = if (state.currentPlayBackNoteIndex == length state.midiData - 1) && ((pure n) == (currentNote)) then
+      checkLastNote n = if (state.currentPlayBackNoteIndex == length state.midiData - 1) && (pure n == currentNote) then
                           true
                         else
                           false
@@ -124,7 +126,7 @@ update (SetMidiKeyBoardInput n) state = state { currentMidiKeyboardInput = n
       newMelody = matchUserInput state.userMelody
       incIndex = if currentNote == Nothing then
                     0
-                 else if (pure n) == currentNote then
+                 else if pure n == currentNote then
                         state.currentPlayBackNoteIndex + 1
                       else
                         state.currentPlayBackNoteIndex
@@ -144,10 +146,10 @@ update IncrementPlayBackIndex state   = state { currentPlayBackNoteIndex = state
 update ResetMelody state              = state { userMelody = state.userMelody }
 
 update PlayButtonPressed state        = state { playButtonPressed        = not state.playButtonPressed }
-update StopButtonPressed state        = state { stopButtonPressed        = not state.playButtonPressed
+update StopButtonPressed state        = state { stopButtonPressed        = false
                                               , currentPlayBackNoteIndex = -1
                                               , recordButtonPressed      = false
-                                              , playButtonPressed        = true }
+                                              , playButtonPressed        = false }
 update PauseButtonPressed state       = state { pauseButtonPressed       = not state.pauseButtonPressed }
 update LoopButtonPressed state        = state { loopButtonPressed        = not state.loopButtonPressed  }
 update NoteButtonPressed state        = state { noteButtonPressed        = not state.noteButtonPressed  }
@@ -157,7 +159,7 @@ update RecordButtonPressed state      = state { recordButtonPressed      = not s
                                                                              -1
                                                                            else
                                                                              0
-                                              , playButtonPressed        = true
+                                              , playButtonPressed        = false
                                               , userNotes                = [] }
 update MetronomeButtonPressed state   = state { metronomeButtonPressed   = not state.metronomeButtonPressed }
 update SettingsButtonPressed state    = state { settingsButtonPressed    = not state.settingsButtonPressed }
@@ -180,7 +182,7 @@ update (SetMidiEvent d) state         = if null d then
   where
     midi = renderMidiPure d state.ticks
 update ResetPlayback state            = state { currentPlayBackNoteIndex = -1
-                                              , playButtonPressed        = true}
+                                              , playButtonPressed        = false}
 
 update (SetLeftLocatorSlider n) state = state { leftLocator = n }
 update (SetRightLocatorSlider n) state = state { rightLocator = n }
@@ -189,7 +191,7 @@ update (SetRightLocatorSlider n) state = state { rightLocator = n }
 init :: State
 init = { currentMidiKeyboardInput : 60
        , currentUIPianoSelection  : 0
-       , currentPlayBackNote      : 60
+       , currentPlayBackNote      : 0
        , currentPlayBackNoteIndex : -1
        , currentSelectedNote      : 0
 
@@ -208,13 +210,13 @@ init = { currentMidiKeyboardInput : 60
        , scoreWindowActivated     : false
          
        , noteHelperActivated      : true
-       , playButtonPressed        : true
+       , playButtonPressed        : false
        , pauseButtonPressed       : false
        , stopButtonPressed        : false
        , recordButtonPressed      : false
        , metronomeButtonPressed   : false
        , loopButtonPressed        : true
-       , noteButtonPressed        : false
+       , noteButtonPressed        : true
        , settingsButtonPressed    : true
          
        , tempoSliderValue         : 120
@@ -223,7 +225,7 @@ init = { currentMidiKeyboardInput : 60
 
 -- TODO: FIX: initEvent gives runtime error in VexFlow: Voice does not have enough notes.
 initEvent = { vexFlowNotes : [[[{ pitch    : ["c/4"]
-                              , duration :  "1"    }]]]
+                                , duration :  "1"    }]]]
             , vexNotes     : [[[]]]
             , indexedTies  : [[]]
             , indexedBeams : [[[]]]
@@ -346,29 +348,33 @@ view state = do
                                                , background : "white"} ] []
 
                              , Pux.div [ id_ "canvasDiv"
-                                       , style { height     : "6b5%"
+                                       , style { height     : "65%"
                                                , width      : "100%"
                                                , background : "white"
                                                , overflow   : "scroll"} ] [ canvas [ id_ "notationCanvas"
-                                                                                   , style { overflow : "scroll"
-                                                                                           , marginLeft : "1.4%"
-                                                                                           , marginRight : "1%" }
+                                                                                   , style { overflow   : "scroll"
+                                                                                           , marginLeft  : "1.4%"
+                                                                                           , marginRight : "1%"}
                                                                                    , height "1000%"
                                                                                    , width "1240%" ] [] ]
-                             -- , Pux.div [ style { height     : "6%"
-                             --                   , width      : "100%"
-                             --                   , background : "#F4F4F4"
-                             --                   } ] [ text $ "Currently selected note : " ++ show state.currentPlayBackMelody
-                             --                       , text $ "        " ++ show state.currentUserMelodyHead
-                             --                       , text $ "        " ++ show state.userMelody                                                     
-                             --                       , text $ "        " ++ show state.ticks
-                             --                       , text $ "        " ++ show state.currentMidiKeyboardInput
-                             --                       , text $ "        " ++ show state.currentUIPianoSelection
-                             --                       , text $ "        " ++ show state.currentPlayBackNote
-                             --                       , text $ "        " ++ show state.currentPlayBackNoteIndex
-                             --                       , text $ "        " ++ show state.lastNote
-                             --                       , text $ "        " ++ show state.tempoSliderValue
-                             --                       , text $ "        " ++ show state.userNotes ]
+                             , Pux.div [ style { height     : "6%"
+                                               , width      : "100%"
+                                               , top : "10%"
+                                               , background : "#F4F4F4"
+                                               , position  : "absolute"
+                                               } ] [ -- text $ "Currently selected note : " ++ show state.currentPlayBackMelody
+                                                   -- , text $ "        " ++ show state.currentUserMelodyHead
+                                  text $ "        " ++ show state.playButtonPressed
+                                  , text $ "        " ++ show state.recordButtonPressed
+                                  ]
+                                                   -- , text $ "        " ++ show state.ticks
+                                                   -- , text $ "        " ++ show state.currentMidiKeyboardInput
+                                                   -- , text $ "        " ++ show state.currentUIPianoSelection
+                                                   -- , text $ "        " ++ show state.currentPlayBackNote
+                                                   -- , text $ "        " ++ show state.currentPlayBackNoteIndex
+                                                   -- , text $ "        " ++ show state.lastNote
+                                                   -- , text $ "        " ++ show state.tempoSliderValue
+                                                   -- , text $ "        " ++ show state.userNotes ]
                              , Pux.div [ style { height     : "20%"
                                                , width      : noteHelperDivSize state.noteHelperActivated ++ "%"
                                                , position   : "absolute"
@@ -541,7 +547,7 @@ buttons state = [ Pux.div [ id_ "Play_button"
                                   , marginLeft : "10%"
                                   , display    : "inline"
                                   , float      : "left"
-                                  , position   : "relative" } ] [ Pux.img [ src if state.playButtonPressed then
+                                  , position   : "relative" } ] [ Pux.img [ src if not state.playButtonPressed then
                                                                                   "playButton.png"
                                                                                 else
                                                                                   "playButtonPressed.png"

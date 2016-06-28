@@ -11,7 +11,7 @@
     "purescript-pux": "^3.0.0",
     "purescript-debug": "^0.1.3",
     "purescript-dom": "^0.2.21",
-    "purescript-vexflow": "https://github.com/marcoalkema/purescript-vexflow.git#8fdaff39d330efcdd9edcaca1cb88a954d46f718",
+    "purescript-vexflow": "https://github.com/marcoalkema/purescript-vexflow.git#056fc688130ff073dbcf4461533948eaa42c23b9",
     "heartbeat": "https://github.com/abudaan/heartbeat.git",
     "midi": "*",
     "purescript-react": "^0.7.1",

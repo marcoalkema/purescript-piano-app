@@ -37,7 +37,7 @@ type MidiNote       = Int
 type MidiNotes      = { midiNotes :: Array MidiJsTypes.MidiNote }
 type Ticks          = Number
 
-midiFile = "test4.mid"
+midiFile = "jig.mid"
 
 -- Entry point for the browser.
 -- main :: forall e. State -> Eff (heartbeat :: HEARTBEAT, console :: CONSOLE, dom :: DOM, channel :: CHANNEL, err :: EXCEPTION, vexFlow :: VEXFLOW, midi :: MidiPlayer.MIDI, canvas :: ClearCanvas.CANVAS | e) (App State Action)
